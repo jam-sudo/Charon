@@ -20,6 +20,7 @@ Exit code: 0 if all strict-target rows PASS, 1 otherwise.
 
 from __future__ import annotations
 
+import math
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -39,7 +40,7 @@ from charon.core.schema import (  # noqa: E402
     PredictedProperty,
     RenalProperties,
 )
-from validation.benchmarks.metrics import fold_error  # noqa: E402
+from validation.benchmarks.metrics import aafe, fold_error, within_n_fold  # noqa: E402
 
 
 def _p(value: float, unit: str = "") -> PredictedProperty:
@@ -144,6 +145,71 @@ def _without_kp_overrides(props: CompoundProperties) -> CompoundProperties:
         update={"empirical_kp_by_tissue": None}
     )
     return props.model_copy(update={"distribution": new_distribution})
+
+
+@dataclass
+class PanelRow:
+    key: str
+    predicted: dict[str, float]
+    observed: dict[str, float]
+    fold: dict[str, float]
+    pass_2_fold: dict[str, bool]
+    override_tissues: list[str]
+    strict_targets: bool
+    mode: str  # "no_override" | "with_override"
+
+
+@dataclass
+class PanelSummary:
+    n: int
+    mode: str
+    aafe: dict[str, float]
+    within_2_fold: dict[str, float]
+    within_3_fold: dict[str, float]
+    strict_failures: int
+
+
+_METRICS = ("cl_L_h", "vss_L", "t_half_h")
+
+
+def aggregate_summary(rows: list[PanelRow], mode: str) -> PanelSummary:
+    """Compute panel-level AAFE and within_n_fold fractions from PanelRows."""
+    n = len(rows)
+    if n == 0:
+        return PanelSummary(
+            n=0,
+            mode=mode,
+            aafe={m: float("nan") for m in _METRICS},
+            within_2_fold={m: float("nan") for m in _METRICS},
+            within_3_fold={m: float("nan") for m in _METRICS},
+            strict_failures=0,
+        )
+
+    aafe_by_metric: dict[str, float] = {}
+    w2_by_metric: dict[str, float] = {}
+    w3_by_metric: dict[str, float] = {}
+    for metric in _METRICS:
+        preds = [r.predicted[metric] for r in rows]
+        obs = [r.observed[metric] for r in rows]
+        aafe_by_metric[metric] = aafe(preds, obs)
+        w2_by_metric[metric] = within_n_fold(preds, obs, n=2.0)
+        w3_by_metric[metric] = within_n_fold(preds, obs, n=3.0)
+
+    strict_failures = 0
+    for r in rows:
+        if not r.strict_targets:
+            continue
+        if not all(r.pass_2_fold[m] for m in _METRICS):
+            strict_failures += 1
+
+    return PanelSummary(
+        n=n,
+        mode=mode,
+        aafe=aafe_by_metric,
+        within_2_fold=w2_by_metric,
+        within_3_fold=w3_by_metric,
+        strict_failures=strict_failures,
+    )
 
 
 # ---------------------------------------------------------------------------
