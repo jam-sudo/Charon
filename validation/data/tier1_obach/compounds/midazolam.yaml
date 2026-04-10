@@ -25,3 +25,15 @@ properties:
     clint_uL_min_mg: {value: 93.0, source: experimental, unit: uL/min/mg, method: "Obach 1999 Table 2"}
   renal:
     clrenal_L_h: {value: 0.0, source: experimental, unit: L/h, method: "Obach 1999 Table 2"}
+  distribution:
+    # Phase 2 (Sprint 3b Task 16): empirical adipose Kp override with
+    # verified primary citation.  Björkman 1996 reports rat experimental
+    # tissue Kp values for midazolam; adipose Kp = 9.0 vs R&R-predicted
+    # ~50 (capped).  This is the canonical "R&R overpredicts adipose for
+    # lipophilic weak bases" fix described in the spec §4.4 Phase 2.
+    empirical_kp_by_tissue:
+      adipose:
+        value: 9.0
+        source: literature
+        unit: ratio
+        method: "Björkman S, J Pharm Sci 1996;85(8):887-889 — rat experimental Kp_adipose"
