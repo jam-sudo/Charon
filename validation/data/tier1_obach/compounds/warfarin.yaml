@@ -1,0 +1,28 @@
+# Obach 1999 Tier-1 panel — warfarin (racemate assumption)
+# Stereoisomer note: Obach 1999 Table 2 reports a single "warfarin" row;
+# values here are taken as racemate. A future curation pass should
+# verify against the printed paper and update to S-warfarin if the
+# reference values correspond to the S-enantiomer specifically.
+name: warfarin
+smiles: "CC(=O)CC(c1ccccc1)C1=C(O)c2ccccc2OC1=O"
+molecular_weight: 308.33
+source: experimental
+properties:
+  physicochemical:
+    logp:
+      value: 3.54
+      source: experimental
+      method: "Obach 1999 Table 2"
+    pka_acid:
+      value: 5.0
+      source: experimental
+      method: "Literature (see commit)"
+    compound_type: acid
+  binding:
+    fu_p: {value: 0.012, source: experimental, unit: fraction, method: "Obach 1999 Table 2"}
+    fu_inc: {value: 0.17, source: experimental, unit: fraction, method: "Obach 1999 Table 2"}
+    bp_ratio: {value: 0.56, source: experimental, unit: ratio, method: "Obach 1999 Table 2"}
+  metabolism:
+    clint_uL_min_mg: {value: 3.1, source: experimental, unit: uL/min/mg, method: "Obach 1999 Table 2"}
+  renal:
+    clrenal_L_h: {value: 0.05, source: experimental, unit: L/h, method: "Obach 1999 Table 2"}

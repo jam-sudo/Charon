@@ -1,0 +1,23 @@
+name: metoprolol
+smiles: "COCCc1ccc(OCC(O)CNC(C)C)cc1"
+molecular_weight: 267.37
+source: experimental
+properties:
+  physicochemical:
+    logp:
+      value: 1.88
+      source: experimental
+      method: "Obach 1999 Table 2"
+    pka_base:
+      value: 9.6
+      source: experimental
+      method: "Literature (see commit)"
+    compound_type: base
+  binding:
+    fu_p: {value: 0.88, source: experimental, unit: fraction, method: "Obach 1999 Table 2"}
+    fu_inc: {value: 1.0, source: experimental, unit: fraction, method: "Obach 1999 Table 2"}
+    bp_ratio: {value: 1.14, source: experimental, unit: ratio, method: "Obach 1999 Table 2"}
+  metabolism:
+    clint_uL_min_mg: {value: 24.0, source: experimental, unit: uL/min/mg, method: "Obach 1999 Table 2"}
+  renal:
+    clrenal_L_h: {value: 0.7, source: experimental, unit: L/h, method: "Obach 1999 Table 2"}

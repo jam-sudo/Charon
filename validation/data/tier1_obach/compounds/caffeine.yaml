@@ -1,0 +1,19 @@
+name: caffeine
+smiles: "Cn1cnc2c1c(=O)n(C)c(=O)n2C"
+molecular_weight: 194.19
+source: experimental
+properties:
+  physicochemical:
+    logp:
+      value: -0.07
+      source: experimental
+      method: "Obach 1999 Table 2"
+    compound_type: neutral
+  binding:
+    fu_p: {value: 0.70, source: experimental, unit: fraction, method: "Obach 1999 Table 2"}
+    fu_inc: {value: 1.0, source: experimental, unit: fraction, method: "Obach 1999 Table 2"}
+    bp_ratio: {value: 1.04, source: experimental, unit: ratio, method: "Obach 1999 Table 2"}
+  metabolism:
+    clint_uL_min_mg: {value: 0.9, source: experimental, unit: uL/min/mg, method: "Obach 1999 Table 2"}
+  renal:
+    clrenal_L_h: {value: 0.1, source: experimental, unit: L/h, method: "Obach 1999 Table 2"}

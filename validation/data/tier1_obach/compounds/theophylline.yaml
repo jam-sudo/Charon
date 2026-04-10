@@ -1,0 +1,22 @@
+# Obach 1999 Tier-1 panel — theophylline
+# Sprint 3a primary validation compound, carried into the Sprint 3b panel
+# as the strict-gate regression anchor.
+name: theophylline
+smiles: "Cn1c(=O)c2[nH]cnc2n(C)c1=O"
+molecular_weight: 180.17
+source: experimental
+properties:
+  physicochemical:
+    logp:
+      value: -0.02
+      source: experimental
+      method: "Obach 1999 Table 2"
+    compound_type: neutral
+  binding:
+    fu_p: {value: 0.60, source: experimental, unit: fraction, method: "Obach 1999 Table 2"}
+    fu_inc: {value: 1.0, source: experimental, unit: fraction, method: "Obach 1999 Table 2"}
+    bp_ratio: {value: 0.85, source: experimental, unit: ratio, method: "Obach 1999 Table 2"}
+  metabolism:
+    clint_uL_min_mg: {value: 1.8, source: experimental, unit: uL/min/mg, method: "Obach 1999 Table 2"}
+  renal:
+    clrenal_L_h: {value: 0.1, source: experimental, unit: L/h, method: "Obach 1999 Table 2"}

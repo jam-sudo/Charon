@@ -1,0 +1,25 @@
+name: diazepam
+smiles: "CN1C(=O)CN=C(c2ccccc2)c2cc(Cl)ccc12"
+molecular_weight: 284.74
+source: experimental
+properties:
+  physicochemical:
+    logp:
+      value: 2.82
+      source: experimental
+      method: "Obach 1999 Table 2"
+    pka_base:
+      value: 3.4
+      source: experimental
+      method: "Literature (chemically a weak base)"
+    # pKa_base 3.4 is too low for R&R base branch (threshold >=7);
+    # diazepam behaves as neutral at pH 7.4, so R&R uses the neutral equations.
+    compound_type: neutral
+  binding:
+    fu_p: {value: 0.013, source: experimental, unit: fraction, method: "Obach 1999 Table 2"}
+    fu_inc: {value: 0.67, source: experimental, unit: fraction, method: "Obach 1999 Table 2"}
+    bp_ratio: {value: 0.58, source: experimental, unit: ratio, method: "Obach 1999 Table 2"}
+  metabolism:
+    clint_uL_min_mg: {value: 0.37, source: experimental, unit: uL/min/mg, method: "Obach 1999 Table 2"}
+  renal:
+    clrenal_L_h: {value: 0.0, source: experimental, unit: L/h, method: "Obach 1999 Table 2"}

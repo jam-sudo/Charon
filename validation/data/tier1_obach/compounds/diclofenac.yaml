@@ -1,0 +1,29 @@
+name: diclofenac
+smiles: "OC(=O)Cc1ccccc1Nc1c(Cl)cccc1Cl"
+molecular_weight: 296.15
+source: experimental
+properties:
+  physicochemical:
+    logp:
+      value: 4.02
+      source: experimental
+      method: "Obach 1999 Table 2"
+    pka_acid:
+      value: 4.0
+      source: experimental
+      method: "Literature (see commit)"
+    compound_type: acid
+  binding:
+    fu_p:
+      # fu_p < 0.01 triggers the ParameterBridge low-fu_p warning per
+      # CLAUDE.md §6j Pitfall #10. This is expected for diclofenac.
+      value: 0.005
+      source: experimental
+      unit: fraction
+      method: "Obach 1999 Table 2"
+    fu_inc: {value: 0.17, source: experimental, unit: fraction, method: "Obach 1999 Table 2"}
+    bp_ratio: {value: 0.55, source: experimental, unit: ratio, method: "Obach 1999 Table 2"}
+  metabolism:
+    clint_uL_min_mg: {value: 11.0, source: experimental, unit: uL/min/mg, method: "Obach 1999 Table 2"}
+  renal:
+    clrenal_L_h: {value: 0.1, source: experimental, unit: L/h, method: "Obach 1999 Table 2"}

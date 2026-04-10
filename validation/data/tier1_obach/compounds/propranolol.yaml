@@ -1,0 +1,23 @@
+name: propranolol
+smiles: "CC(C)NCC(O)COc1cccc2ccccc12"
+molecular_weight: 259.34
+source: experimental
+properties:
+  physicochemical:
+    logp:
+      value: 3.48
+      source: experimental
+      method: "Obach 1999 Table 2"
+    pka_base:
+      value: 9.5
+      source: experimental
+      method: "Literature (see commit)"
+    compound_type: base
+  binding:
+    fu_p: {value: 0.13, source: experimental, unit: fraction, method: "Obach 1999 Table 2"}
+    fu_inc: {value: 0.96, source: experimental, unit: fraction, method: "Obach 1999 Table 2"}
+    bp_ratio: {value: 0.80, source: experimental, unit: ratio, method: "Obach 1999 Table 2"}
+  metabolism:
+    clint_uL_min_mg: {value: 13.6, source: experimental, unit: uL/min/mg, method: "Obach 1999 Table 2"}
+  renal:
+    clrenal_L_h: {value: 0.1, source: experimental, unit: L/h, method: "Obach 1999 Table 2"}

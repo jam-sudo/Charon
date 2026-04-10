@@ -1,0 +1,27 @@
+name: midazolam
+smiles: "Cc1ncc2n1-c1ccc(Cl)cc1C(c1ccccc1F)=NC2"
+molecular_weight: 325.77
+source: experimental
+properties:
+  physicochemical:
+    logp:
+      value: 3.89
+      source: experimental
+      method: "Obach 1999 Table 2"
+    pka_base:
+      value: 6.2
+      source: experimental
+      method: "Literature (see commit)"
+    # Sprint 3a convention: explicit 'base' override because
+    # infer_compound_type default threshold pKa_base>8.0 would classify
+    # midazolam (pKa_base=6.2) as neutral. Keep in sync with
+    # tests/unit/test_pipeline.py::TestPipelineMidazolamLimitation.
+    compound_type: base
+  binding:
+    fu_p: {value: 0.03, source: experimental, unit: fraction, method: "Obach 1999 Table 2"}
+    fu_inc: {value: 0.96, source: experimental, unit: fraction, method: "Obach 1999 Table 2"}
+    bp_ratio: {value: 0.66, source: experimental, unit: ratio, method: "Obach 1999 Table 2"}
+  metabolism:
+    clint_uL_min_mg: {value: 93.0, source: experimental, unit: uL/min/mg, method: "Obach 1999 Table 2"}
+  renal:
+    clrenal_L_h: {value: 0.0, source: experimental, unit: L/h, method: "Obach 1999 Table 2"}
