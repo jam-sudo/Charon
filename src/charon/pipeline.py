@@ -164,5 +164,16 @@ class Pipeline:
                 "fu_b": params.fu_b,
                 "solver_method": sim.solver_method,
                 "solver_nfev": sim.solver_nfev,
+                "kp_overrides": [
+                    {
+                        "tissue": r.tissue,
+                        "rr_value": r.rr_value,
+                        "empirical_value": r.empirical_value,
+                        "source": r.source,
+                        "method": r.method,
+                        "flag": r.flag,
+                    }
+                    for r in params.kp_overrides
+                ],
             },
         )

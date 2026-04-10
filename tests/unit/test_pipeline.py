@@ -249,3 +249,101 @@ class TestPipelineMidazolamLimitation:
             f"CL fold error {fold:.2f} (pred={cl:.2f}, obs={observed_cl}) — "
             f"midazolam is known-hard; exceeds even 4-fold suggests ODE bug"
         )
+
+
+class TestPipelineMetadataKpOverrides:
+    """Verify that kp_overrides flow from build_compound_pbpk_params
+    into PipelineResult.metadata['kp_overrides']."""
+
+    def _midazolam_with_override(self):
+        from charon.core.schema import (
+            BindingProperties, CompoundConfig, CompoundProperties,
+            DistributionProperties, MetabolismProperties,
+            PhysicochemicalProperties, PredictedProperty, RenalProperties,
+        )
+        return CompoundConfig(
+            name="midazolam-test",
+            smiles="Cc1ncc2n1-c1ccc(Cl)cc1C(c1ccccc1F)=NC2",
+            molecular_weight=325.77,
+            source="experimental",
+            properties=CompoundProperties(
+                physicochemical=PhysicochemicalProperties(
+                    logp=PredictedProperty(value=3.89, source="experimental"),
+                    pka_base=PredictedProperty(value=6.2, source="experimental"),
+                    compound_type="base",
+                ),
+                binding=BindingProperties(
+                    fu_p=PredictedProperty(value=0.03, source="experimental", unit="fraction"),
+                    fu_inc=PredictedProperty(value=0.96, source="experimental", unit="fraction"),
+                    bp_ratio=PredictedProperty(value=0.66, source="experimental", unit="ratio"),
+                ),
+                metabolism=MetabolismProperties(
+                    clint_uL_min_mg=PredictedProperty(value=93.0, source="experimental", unit="uL/min/mg"),
+                ),
+                renal=RenalProperties(
+                    clrenal_L_h=PredictedProperty(value=0.0, source="experimental", unit="L/h"),
+                ),
+                distribution=DistributionProperties(
+                    empirical_kp_by_tissue={
+                        "adipose": PredictedProperty(
+                            value=10.0, source="literature",
+                            method="test-citation"
+                        ),
+                    }
+                ),
+            ),
+        )
+
+    def test_metadata_contains_kp_overrides_list(self):
+        from charon import Pipeline
+
+        pipe = Pipeline(
+            compound=self._midazolam_with_override(),
+            route="iv_bolus",
+            dose_mg=5.0,
+            duration_h=168.0,
+        )
+        result = pipe.run()
+        overrides = result.metadata["kp_overrides"]
+        assert isinstance(overrides, list)
+        assert len(overrides) == 1
+        entry = overrides[0]
+        assert entry["tissue"] == "adipose"
+        assert entry["empirical_value"] == 10.0
+        assert entry["source"] == "literature"
+        assert entry["method"] == "test-citation"
+        assert "rr_value" in entry  # R&R original preserved for audit
+
+    def test_metadata_overrides_empty_for_no_override_compound(self):
+        """Sprint 3a theophylline fixture (no distribution field) -> empty list."""
+        from charon import Pipeline
+        from charon.core.schema import (
+            BindingProperties, CompoundConfig, CompoundProperties,
+            MetabolismProperties, PhysicochemicalProperties,
+            PredictedProperty, RenalProperties,
+        )
+        theo = CompoundConfig(
+            name="theophylline",
+            smiles="Cn1c(=O)c2[nH]cnc2n(C)c1=O",
+            molecular_weight=180.17,
+            source="experimental",
+            properties=CompoundProperties(
+                physicochemical=PhysicochemicalProperties(
+                    logp=PredictedProperty(value=-0.02, source="experimental"),
+                ),
+                binding=BindingProperties(
+                    fu_p=PredictedProperty(value=0.60, source="experimental", unit="fraction"),
+                    fu_inc=PredictedProperty(value=1.0, source="experimental", unit="fraction"),
+                    bp_ratio=PredictedProperty(value=0.85, source="experimental", unit="ratio"),
+                ),
+                metabolism=MetabolismProperties(
+                    clint_uL_min_mg=PredictedProperty(value=1.8, source="experimental", unit="uL/min/mg"),
+                ),
+                renal=RenalProperties(
+                    clrenal_L_h=PredictedProperty(value=0.1, source="experimental", unit="L/h"),
+                ),
+            ),
+        )
+        pipe = Pipeline(compound=theo, route="iv_bolus", dose_mg=100.0, duration_h=168.0)
+        result = pipe.run()
+        assert result.metadata["kp_overrides"] == []
