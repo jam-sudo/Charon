@@ -178,3 +178,63 @@ class TestLoadPanel:
         """).lstrip())
         with pytest.raises(KeyError, match="cl_L_h"):
             load_panel(root / "panel.yaml")
+
+
+class TestWithoutKpOverrides:
+    def test_strips_empirical_kp(self):
+        from charon.core.schema import (
+            CompoundProperties, DistributionProperties,
+            PhysicochemicalProperties, PredictedProperty,
+        )
+        from validation.benchmarks.layer2_human_pk import _without_kp_overrides
+
+        original = CompoundProperties(
+            physicochemical=PhysicochemicalProperties(
+                logp=PredictedProperty(value=3.89, source="experimental"),
+            ),
+            distribution=DistributionProperties(
+                empirical_kp_by_tissue={
+                    "adipose": PredictedProperty(
+                        value=10.0, source="literature", method="test"
+                    ),
+                }
+            ),
+        )
+        stripped = _without_kp_overrides(original)
+        assert stripped.distribution.empirical_kp_by_tissue is None
+        # Other fields preserved
+        assert stripped.physicochemical.logp.value == 3.89
+
+    def test_no_override_case_is_noop(self):
+        from charon.core.schema import CompoundProperties, PhysicochemicalProperties, PredictedProperty
+        from validation.benchmarks.layer2_human_pk import _without_kp_overrides
+
+        original = CompoundProperties(
+            physicochemical=PhysicochemicalProperties(
+                logp=PredictedProperty(value=-0.02, source="experimental"),
+            ),
+        )
+        stripped = _without_kp_overrides(original)
+        assert stripped.distribution.empirical_kp_by_tissue is None
+        assert stripped.physicochemical.logp.value == -0.02
+
+    def test_stripped_distribution_is_same_type(self):
+        """The strip must not degrade to a parent type."""
+        from charon.core.schema import (
+            CompoundProperties, DistributionProperties,
+            PredictedProperty,
+        )
+        from validation.benchmarks.layer2_human_pk import _without_kp_overrides
+
+        original = CompoundProperties(
+            distribution=DistributionProperties(
+                empirical_kp_by_tissue={
+                    "adipose": PredictedProperty(
+                        value=10.0, source="literature", method="test"
+                    ),
+                }
+            ),
+        )
+        stripped = _without_kp_overrides(original)
+        assert isinstance(stripped.distribution, DistributionProperties)
+        assert stripped.distribution.empirical_kp_by_tissue is None

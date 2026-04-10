@@ -133,6 +133,19 @@ def load_panel(panel_path: Path) -> list[PanelEntry]:
     return entries
 
 
+def _without_kp_overrides(props: CompoundProperties) -> CompoundProperties:
+    """Return a copy of props with empirical_kp_by_tissue cleared.
+
+    Uses nested model_copy so other fields of DistributionProperties
+    that may be added in future (e.g. Vss_pred, tissue-level fu) are
+    preserved rather than silently reset to their defaults.
+    """
+    new_distribution = props.distribution.model_copy(
+        update={"empirical_kp_by_tissue": None}
+    )
+    return props.model_copy(update={"distribution": new_distribution})
+
+
 # ---------------------------------------------------------------------------
 # Sprint 3a: BenchmarkCompound Python factories (removed in Task 14)
 # ---------------------------------------------------------------------------
