@@ -29,6 +29,18 @@ from charon.core.schema import CompoundConfig
 from charon.pbpk.kp_calculator import compute_all_kp
 from charon.pbpk.topology import PBPKTopology, PORTAL_TISSUES
 
+@dataclass(frozen=True)
+class KpOverrideRecord:
+    """Audit record for a single tissue-level empirical Kp override."""
+
+    tissue: str
+    rr_value: float          # what R&R computed
+    empirical_value: float   # what was injected
+    source: str              # PredictedProperty.source
+    method: str | None       # PredictedProperty.method (citation string)
+    flag: str | None         # PredictedProperty.flag (optional)
+
+
 _COMPOUND_TYPES = ("neutral", "acid", "base", "zwitterion")
 
 
@@ -48,6 +60,7 @@ class CompoundPBPKParams:
     clint_liver_L_h: float
     cl_renal_L_h: float
     kp_by_tissue: dict[str, float]
+    kp_overrides: tuple[KpOverrideRecord, ...] = ()
 
 
 def infer_compound_type(pka_acid: float | None, pka_base: float | None) -> str:
