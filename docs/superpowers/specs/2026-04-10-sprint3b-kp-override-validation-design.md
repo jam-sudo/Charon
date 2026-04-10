@@ -49,10 +49,22 @@ panel; the CI/test gates check only the regression invariants below.
    TestPipelineTheophyllineValidation` still passes unchanged.
 3. midazolam's `TestPipelineMidazolamLimitation` still passes unchanged
    (non-gated, documents R&R limitation). A **new** testcase verifies
-   that midazolam with `empirical_kp_by_tissue['adipose']` override
-   produces Vss fold error < 3.0 (proves the override path works
-   end-to-end — the specific threshold is a sanity check, not a literary
-   target).
+   the override path end-to-end using a **mechanism check**, NOT a
+   specific numerical target:
+
+   - `Pipeline(midazolam, ...).run()` with a hand-picked synthetic
+     `empirical_kp_by_tissue={'adipose': {value: 10.0, ...}}` must
+     return a `PipelineResult.metadata['kp_overrides']` list of length
+     1 whose single entry has `tissue == "adipose"` and
+     `empirical_value == 10.0`.
+   - The resulting `Vss` value must be finite and strictly less than
+     the no-override `Vss` from the same compound (override reduces
+     overprediction; direction-of-effect check).
+
+   This test uses synthetic override values so it is independent of
+   the citation verification outcome. It proves the plumbing works.
+   The actual literature-sourced override that lands in the midazolam
+   YAML is tested separately at the benchmark level (DoD §4).
 4. `validation/benchmarks/layer2_human_pk.py` loads
    `validation/data/tier1_obach/panel.yaml`, runs all 10 compounds to
    completion without solver failure, prints a two-pass summary table
@@ -354,7 +366,7 @@ validation/data/tier1_obach/
     ├── theophylline.yaml            NEW — mirrors existing Python fixture
     ├── antipyrine.yaml              NEW
     ├── caffeine.yaml                NEW
-    ├── warfarin.yaml                NEW — S-warfarin, CYP2C9 pathway
+    ├── warfarin.yaml                NEW — stereoisomer resolved at curation (§4.6 #1)
     ├── diclofenac.yaml              NEW
     ├── midazolam.yaml               NEW — includes empirical_kp override
     ├── propranolol.yaml             NEW
@@ -501,31 +513,61 @@ value read directly from a verified primary source (see Section 7.2).
 The numerical value is **not pinned in this design spec** because
 pinning a number without an open paper in front of the author would be
 fabrication. The citation-verification task is a hard prerequisite
-before Phase 2 is committed; if all three fallback paths in Section 7.2
-fail, the override entry is marked `source: synthetic_test` and the
-session summary documents the degraded mode explicitly.
+before Phase 2 is committed.
+
+**Interaction with DoD §2 ≥2 verified-override rule**: midazolam is the
+primary override compound but not the only one. The session also adds a
+second verified override on one of propranolol/diazepam (see DoD §2).
+The rule is: **Fallback 3 (synthetic_test) never counts toward the ≥2
+verified quota**. With only two override targets in this session, that
+means either compound falling to Fallback 3 brings the verified count
+below 2, which triggers escalation (pause, report, ask for direction)
+per Section 12 §6. The implementation plan must NOT silently commit a
+synthetic override on midazolam even if the secondary compound has a
+verified citation — Fallback 3 is only usable in future sessions that
+carry more override targets.
 
 ### 4.5 Compound selection rationale
 
-10 compounds across 3 chemical classes, all from Obach 1999:
+10 compounds across 3 R&R classification branches, all from Obach 1999.
+The "R&R class" column is the classification used in the compound YAML
+for `PhysicochemicalProperties.compound_type` — this is a *mechanistic*
+classification, not the compound's chemical identity.
 
-| Compound | Class | Primary CYP | Extraction | Role |
-|---|---|---|---|---|
-| theophylline | neutral | CYP1A2 | low | primary gate, Sprint 3a carryover |
-| antipyrine | neutral | CYP multiple | low | phenotyping probe, clean PK |
-| caffeine | neutral | CYP1A2 | low | low-clearance case |
-| warfarin (S-) | acid | CYP2C9 | low | highly protein-bound acid |
-| diclofenac | acid | CYP2C9 | mid | moderate extraction acid |
-| midazolam | base | CYP3A4 | high | R&R limitation case, override demo |
-| propranolol | base | CYP2D6 | high | high extraction base |
-| diazepam | base | CYP2C19/3A4 | low | long t½ base, well-characterized |
-| metoprolol | base | CYP2D6 | mid | β-blocker base |
-| verapamil | base | CYP3A4 | very high | engine stress test (ER > 0.9) |
+| Compound | R&R class | Chem. identity | Primary CYP | Extraction | Role |
+|---|---|---|---|---|---|
+| theophylline | neutral | neutral | CYP1A2 | low | primary gate, Sprint 3a carryover |
+| antipyrine | neutral | neutral | CYP multiple | low | phenotyping probe, clean PK |
+| caffeine | neutral | neutral | CYP1A2 | low | low-clearance case |
+| diazepam | neutral¹ | weak base | CYP2C19/3A4 | low | long t½; pKa_base 3.4 → neutral at pH 7.4 |
+| warfarin | acid² | acid | CYP2C9 | low | highly protein-bound acid |
+| diclofenac | acid | acid | CYP2C9 | mid | moderate extraction acid |
+| midazolam | base³ | weak base | CYP3A4 | high | R&R limitation case, override demo |
+| propranolol | base | base | CYP2D6 | high | high extraction base |
+| metoprolol | base | base | CYP2D6 | mid | β-blocker base |
+| verapamil | base | base | CYP3A4 | very high | engine stress test (ER > 0.9) |
 
-The base-heavy skew (5/10) is intentional: that's where R&R's known
-failure mode lives, and it's where the override path demonstrates value.
-The 3 neutrals anchor the panel to "R&R works fine here" baseline. The
-2 acids exercise the acid branch of R&R, which Sprint 3a never tested.
+**Footnotes:**
+
+1. **diazepam** is chemically a benzodiazepine (weak base, pKa_base ≈
+   3.4). At physiological pH 7.4, the ionized fraction is ~0.01%, so
+   diazepam behaves as effectively neutral. The R&R Kp calculation uses
+   the neutral branch, and `compound_type: neutral` is recorded in the
+   YAML. See Section 4.6 #2.
+2. **warfarin** (racemate vs S-enantiomer) is resolved at curation time
+   — see Section 4.6 #1. The YAML `name` field records which form the
+   values correspond to.
+3. **midazolam** pKa_base 6.2 is below R&R's strict "moderate base"
+   threshold of 7. Sprint 3a explicitly classified it as "base" to
+   exercise the base-branch equations, and the same convention is
+   preserved here. This classification is a deliberate choice carried
+   forward from Sprint 3a, not a silent default.
+
+**Panel composition by R&R class:** 4 neutral, 2 acid, 4 base. The base
+group is where R&R's known failure mode lives and where the override
+path demonstrates value. The neutral group anchors the panel to "R&R
+works here" baseline. The acid group exercises the R&R acid branch,
+which Sprint 3a never tested.
 
 **No zwitterion**: cetirizine is the obvious candidate but its IV data
 in healthy adults is less standard than the others. Documented as a gap;
@@ -749,7 +791,7 @@ New test files (counts are estimates):
 | `tests/unit/test_compound_type_resolution.py` | ~6 | Precedence: Pipeline kwarg > YAML field > inferred. All three paths exercised. |
 | `tests/unit/test_panel_loader.py` | ~6 | `panel.yaml` → list[PanelEntry], missing compound_file raises, dose_mg/duration_h resolution from default + override, observed fields required |
 | `tests/unit/test_panel_metrics.py` | ~6 | `aggregate()` on synthetic rows: known fold errors → expected AAFE / within_n_fold, handles mode labeling |
-| `tests/unit/test_pipeline_midazolam_override.py` | ~3 | Regression: existing `TestPipelineMidazolamLimitation` unchanged; new test loads midazolam YAML with adipose override → Vss fold error < 3.0 (mechanism check, not target) |
+| `tests/unit/test_pipeline_midazolam_override.py` | ~3 | Regression: existing `TestPipelineMidazolamLimitation` unchanged; new tests use synthetic `empirical_kp_by_tissue={'adipose': 10.0}` to verify (a) `PipelineResult.metadata['kp_overrides']` contains exactly one entry with correct tissue/value, (b) `Vss` with override is strictly less than `Vss` without override (direction-of-effect), (c) no-override baseline still matches Sprint 3a `TestPipelineMidazolamLimitation` expected values. Does NOT assert a specific numerical fold-error target. |
 | `tests/integration/test_obach_panel_smoke.py` | ~3 | End-to-end: all 10 compounds run without error, all PK values finite positive, panel AAFE < sanity floor (5.0 for Vss), strict-target compounds pass their 2-fold gate. Uses `record_property` so CI artifacts preserve the measured AAFE. |
 
 Expected new tests: ~42.
@@ -830,15 +872,23 @@ PBPK literature is older and denser). Diazepam is already in the panel,
 so the switch is a re-pointing of which compound's YAML carries the
 override, not a panel restructuring.
 
-**Fallback 3**: if all citation paths fail, the `empirical_kp_by_tissue`
-field is populated with a clearly-marked synthetic value
-(`source: "synthetic_test"`, `method: "mechanism-only, not scientific"`)
-purely to exercise the override path in tests. The midazolam limitation
-test then retains its 4-fold relaxed assertion (Sprint 3a behavior) and
-the session summary documents that the demo value is for plumbing
-verification only. **This fallback is a last resort** because it
-weakens the scientific value of the session; the implementation plan
-treats Fallbacks 1-2 as strongly preferred.
+**Fallback 3**: if all citation paths fail for BOTH the primary
+(midazolam) and secondary (propranolol / diazepam) override compounds,
+the session is **incomplete** per DoD §2 (≥2 verified-citation
+override rule). The implementation plan must escalate rather than
+ship: pause execution, report the blockage, and ask for direction
+(e.g. swap the override target to a different compound, extend the
+citation search, accept a reduced panel of 1 verified override with
+explicit DoD waiver, etc.). Fallback 3 is therefore **forbidden as a
+silent fallback** in this session; it may only be invoked per-compound
+when ≥2 other verified overrides exist (which is only possible in
+future sessions that expand the override target list beyond two).
+
+In practice for Sprint 3b Session 1: Fallback 3 is dead code. It is
+documented so that future sessions (which may carry more override
+compounds) have a mechanism for a single degraded entry, and so that
+the test plumbing can exercise the `source: "synthetic_test"` code
+path without requiring a fallback trigger in production.
 
 ### 7.3 "Not tuning" principle
 
@@ -857,14 +907,14 @@ the compromise visible.
 | Risk | Impact | Mitigation |
 |---|---|---|
 | Obach 1999 Table value curation error (typo in CL/Vss/t½) | AAFE metrics wrong; baseline poisoned | Every numeric value cites `obach_table_row`; implementation plan has a "cross-check against primary source" task per compound; tests assert specific observed values so typos surface in the smoke test diff |
-| Kp override citation (Björkman) cannot be verified | Cannot commit midazolam adipose override | Documented 3-tier fallback (Section 7.2); implementation plan explicitly permits falling back without re-opening the design |
+| Kp override citation (Björkman) cannot be verified | Midazolam adipose override blocked | 3-tier fallback cascade (Section 7.2): Björkman → Rodgers 2005 → swap to diazepam. DoD §2 ≥2 verified rule prevents silent all-synthetic ship — if citation cascade fails for both primary and secondary override targets, session escalates rather than degrades |
 | `distribution` schema addition breaks existing YAML round-trip | Sprint 3a fixtures fail to load | `distribution: DistributionProperties = DistributionProperties()` default ensures field-absent YAML parses unchanged; explicit test round-trips the existing theophylline and midazolam Python fixtures through schema serialize → deserialize before touching `build_compound_pbpk_params` |
 | Tissue-name validation drift (benchmark uses `"fat"` but topology has `"adipose"`) | Runtime error, confusing for users | `build_compound_pbpk_params` raises with the valid-tissue list included in the error message; a unit test covers the exact error text |
 | Curated `compound_type: "base"` for borderline bases (pKa_base 6.2) changes Kp classification silently for anyone relying on the old "neutral" classification | Unexpected change in predicted Vss for existing users | Only the panel YAMLs set `compound_type`; no existing fixture is modified; `infer_compound_type` thresholds stay untouched; backward-compat tests verify no-change on existing fixtures |
-| Benchmark wall time grows 10× with panel expansion | Slow CI | 10 compounds × ~0.3 s each ≈ 3 s, well below CI budget. Not enforced this session. |
+| Benchmark wall time grows 10× with panel expansion | Slow CI | Expected to remain well under CI per-test budget (Sprint 3a theophylline integration test runs in a couple of seconds; 10 compounds in sequence should stay in the same order of magnitude). Wall time not enforced this session; if it becomes a problem, the benchmark can be marked `@pytest.mark.slow` and excluded from default CI. |
 | Panel-level AAFE_Vss > 5.0 (sanity floor trip) | Session not complete; root cause unknown | DoD §7 gates this explicitly. Likely root causes: Obach curation error, compound_type mis-classification, or an actually-broken Kp model path in Sprint 3a that theophylline's neutral chemistry didn't exercise. Triage protocol in implementation plan. |
 | `mppgl` / `hepatocellularity` remain hardcoded to human values | Session is clean; Sprint 4 rat/dog will need a fix | Document as known future work in a `KNOWN_FUTURE_WORK` section of the final commit message; do NOT attempt to fix here (adds risk without validation reward). |
-| Two-pass benchmark runs each compound twice → doubled solver load | Slight CI wall time increase | Acceptable; alternative (caching first-pass results) adds complexity for negligible gain. Measured cost ~6 s on dev box. |
+| Two-pass benchmark runs each compound twice → doubled solver load | Slight CI wall time increase | Acceptable; alternative (caching first-pass results, or skipping pass 2 for compounds without overrides) adds complexity for negligible gain. If wall time actually becomes problematic, the "skip pass 2 when entry has no overrides" optimization is a 5-line change. |
 
 ---
 
@@ -938,6 +988,7 @@ src/charon/
 │   └── ode_compiler.py                 UPDATE  KpOverrideRecord (new),
 │                                               CompoundPBPKParams.kp_overrides,
 │                                               build_compound_pbpk_params:
+│                                                 - species!='human' guard
 │                                                 - compound_type precedence
 │                                                 - empirical override loop
 │                                                 - unknown-tissue error
@@ -994,12 +1045,15 @@ The user granted autonomous execution authority for this session
 4. Commit messages describe deliverables concretely.
 5. On any failure: diagnose root cause before retrying.
 6. Do not commit override numerical values without verified citations.
-   If all citation paths fail, use Fallback 3 (synthetic test value)
-   and document explicitly in the commit message.
+   If all citation paths fail for both primary and secondary override
+   compounds, **escalate rather than degrade**: pause, report the
+   blockage, and ask for direction. Do NOT silently ship all-synthetic
+   overrides (see DoD §2 ≥2 verified rule).
 7. Session ends only when (a) all gates above pass, (b) panel AAFE_Vss
    with-override < 5.0 sanity floor, (c) session summary explicitly
    states measured panel-level AAFE values for all 10 compounds on all
-   3 metrics.
+   3 metrics, (d) ≥2 compounds have verified-citation empirical Kp
+   overrides recorded in their YAML files.
 
 ---
 
