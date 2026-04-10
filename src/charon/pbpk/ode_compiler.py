@@ -157,7 +157,11 @@ def build_compound_pbpk_params(
             f"compound {compound.name!r} has no molecular_weight; required for PBPK"
         )
 
-    resolved_type = compound_type or infer_compound_type(pka_acid, pka_base)
+    resolved_type = (
+        compound_type
+        or compound.properties.physicochemical.compound_type
+        or infer_compound_type(pka_acid, pka_base)
+    )
     if resolved_type not in _COMPOUND_TYPES:
         raise ValueError(
             f"compound_type must be one of {_COMPOUND_TYPES}, got {resolved_type!r}"
