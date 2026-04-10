@@ -1,21 +1,13 @@
-"""Layer 2 human PBPK benchmark.
+"""Layer 2 human PBPK benchmark — Obach 1999 Tier-1 panel (10 compounds).
 
-Runs the Charon IV PBPK kernel on a small reference panel and prints a
-table comparing predicted CL / Vss / t_half to literature observed values.
-
-Sprint 3 scope: 2 compounds
-  - theophylline  : well-behaved R&R Kp (neutral, low logP) — primary validation
-  - midazolam     : documented R&R overprediction case (weak base, high logP)
-
-Sprint 3b will extend to the full Obach 1999 IV dataset and tighten the
-R&R Kp calibration for weak bases via Berezhkovskiy and/or empirical
-adipose overrides.
+Loads ``validation/data/tier1_obach/panel.yaml``, runs each compound
+twice (no-override and with-override), and prints per-metric panel
+AAFE / within-2-fold / within-3-fold summaries. Exit 0 iff every
+``strict_targets: true`` compound passes 2-fold on CL, Vss, and t½.
 
 Run as a standalone script::
 
     python3 validation/benchmarks/layer2_human_pk.py
-
-Exit code: 0 if all strict-target rows PASS, 1 otherwise.
 """
 
 from __future__ import annotations
@@ -24,6 +16,7 @@ import math
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 import yaml
 
@@ -32,26 +25,23 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from charon import Pipeline  # noqa: E402
 from charon.core.schema import (  # noqa: E402
-    BindingProperties,
     CompoundConfig,
     CompoundProperties,
-    MetabolismProperties,
-    PhysicochemicalProperties,
-    PredictedProperty,
-    RenalProperties,
 )
 from validation.benchmarks.metrics import aafe, fold_error, within_n_fold  # noqa: E402
 
 
-def _p(value: float, unit: str = "") -> PredictedProperty:
-    return PredictedProperty(value=float(value), source="experimental", unit=unit)
+DEFAULT_PANEL_PATH = (
+    REPO_ROOT / "validation" / "data" / "tier1_obach" / "panel.yaml"
+)
+
+_METRICS = ("cl_L_h", "vss_L", "t_half_h")
 
 
 # ---------------------------------------------------------------------------
-# Sprint 3b: Panel loader — PanelEntry dataclass and load_panel()
-# The Sprint 3a BenchmarkCompound / theophylline() / midazolam() factories
-# below remain unchanged and will be removed in Task 14.
+# Data types
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class PanelEntry:
@@ -66,31 +56,35 @@ class PanelEntry:
     notes: str
 
 
+@dataclass
+class PanelRow:
+    key: str
+    predicted: dict[str, float]
+    observed: dict[str, float]
+    fold: dict[str, float]
+    pass_2_fold: dict[str, bool]
+    override_tissues: list[str]
+    strict_targets: bool
+    mode: str  # "no_override" | "with_override"
+
+
+@dataclass
+class PanelSummary:
+    n: int
+    mode: str
+    aafe: dict[str, float]
+    within_2_fold: dict[str, float]
+    within_3_fold: dict[str, float]
+    strict_failures: int
+
+
+# ---------------------------------------------------------------------------
+# Loader + strip helpers
+# ---------------------------------------------------------------------------
+
+
 def load_panel(panel_path: Path) -> list[PanelEntry]:
-    """Load a panel.yaml file and all compound files it references.
-
-    `panel.yaml` format::
-
-        name: "..."
-        source: "..."
-        default_duration_h: 168.0
-        compounds:
-          - key: theophylline
-            compound_file: compounds/theophylline.yaml
-            route: iv_bolus
-            dose_mg: 100.0
-            duration_h: 168.0          # optional; falls back to default_duration_h
-            observed:
-              cl_L_h: 2.9
-              vss_L: 35.0
-              t_half_h: 8.0
-            obach_table_row: 42        # optional
-            strict_targets: true
-            notes: "..."               # optional
-
-    Returns a list of `PanelEntry` objects with fully-loaded
-    `CompoundConfig` instances.
-    """
+    """Load a panel.yaml file and all compound files it references."""
     panel_path = Path(panel_path)
     with panel_path.open() as f:
         raw = yaml.safe_load(f)
@@ -99,7 +93,6 @@ def load_panel(panel_path: Path) -> list[PanelEntry]:
     entries: list[PanelEntry] = []
 
     for idx, item in enumerate(raw["compounds"]):
-        # Resolve compound file relative to the panel's directory
         compound_file = panel_path.parent / item["compound_file"]
         if not compound_file.exists():
             raise FileNotFoundError(
@@ -110,7 +103,6 @@ def load_panel(panel_path: Path) -> list[PanelEntry]:
             compound_data = yaml.safe_load(cf)
         compound = CompoundConfig.model_validate(compound_data)
 
-        # Observed PK keys are required (KeyError surfaces typos early)
         observed = {
             "cl_L_h": float(item["observed"]["cl_L_h"]),
             "vss_L": float(item["observed"]["vss_L"]),
@@ -147,33 +139,64 @@ def _without_kp_overrides(props: CompoundProperties) -> CompoundProperties:
     return props.model_copy(update={"distribution": new_distribution})
 
 
-@dataclass
-class PanelRow:
-    key: str
-    predicted: dict[str, float]
-    observed: dict[str, float]
-    fold: dict[str, float]
-    pass_2_fold: dict[str, bool]
-    override_tissues: list[str]
-    strict_targets: bool
-    mode: str  # "no_override" | "with_override"
+# ---------------------------------------------------------------------------
+# Single-compound run
+# ---------------------------------------------------------------------------
 
 
-@dataclass
-class PanelSummary:
-    n: int
-    mode: str
-    aafe: dict[str, float]
-    within_2_fold: dict[str, float]
-    within_3_fold: dict[str, float]
-    strict_failures: int
+def _run_one(
+    compound: CompoundConfig,
+    entry: PanelEntry,
+    mode: Literal["no_override", "with_override"],
+) -> PanelRow:
+    pipe = Pipeline(
+        compound=compound,
+        route=entry.route,  # type: ignore[arg-type]
+        dose_mg=entry.dose_mg,
+        duration_h=entry.duration_h,
+    )
+    result = pipe.run()
+    pk = result.pk_parameters
+
+    predicted = {
+        "cl_L_h": float(pk.cl_apparent) if pk.cl_apparent is not None else float("nan"),
+        "vss_L": float(pk.vss) if pk.vss is not None else float("nan"),
+        "t_half_h": float(pk.half_life) if pk.half_life is not None else float("nan"),
+    }
+    fold: dict[str, float] = {}
+    pass_2_fold: dict[str, bool] = {}
+    for m in _METRICS:
+        p = predicted[m]
+        o = entry.observed[m]
+        if p <= 0 or math.isnan(p):
+            fold[m] = float("inf")
+            pass_2_fold[m] = False
+        else:
+            fold[m] = fold_error(p, o)
+            pass_2_fold[m] = fold[m] <= 2.0
+
+    override_tissues = [
+        ovr["tissue"] for ovr in result.metadata.get("kp_overrides", [])
+    ]
+
+    return PanelRow(
+        key=entry.key,
+        predicted=predicted,
+        observed=entry.observed,
+        fold=fold,
+        pass_2_fold=pass_2_fold,
+        override_tissues=override_tissues,
+        strict_targets=entry.strict_targets,
+        mode=mode,
+    )
 
 
-_METRICS = ("cl_L_h", "vss_L", "t_half_h")
+# ---------------------------------------------------------------------------
+# Aggregation
+# ---------------------------------------------------------------------------
 
 
 def aggregate_summary(rows: list[PanelRow], mode: str) -> PanelSummary:
-    """Compute panel-level AAFE and within_n_fold fractions from PanelRows."""
     n = len(rows)
     if n == 0:
         return PanelSummary(
@@ -213,146 +236,119 @@ def aggregate_summary(rows: list[PanelRow], mode: str) -> PanelSummary:
 
 
 # ---------------------------------------------------------------------------
-# Sprint 3a: BenchmarkCompound Python factories (removed in Task 14)
+# Main execution
 # ---------------------------------------------------------------------------
 
-@dataclass
-class BenchmarkCompound:
-    compound: CompoundConfig
-    dose_mg: float
-    duration_h: float
-    compound_type_override: str | None
-    observed: dict[str, float]       # cl, vss, t_half
-    strict_targets: bool             # if False, all rows print but do not gate exit
 
+def run_benchmark(
+    panel_path: Path,
+) -> tuple[dict[str, PanelSummary], dict[str, list[PanelRow]]]:
+    """Execute the two-pass benchmark and return (summaries, rows)."""
+    panel = load_panel(panel_path)
 
-def theophylline() -> BenchmarkCompound:
-    cfg = CompoundConfig(
-        name="theophylline",
-        smiles="Cn1c(=O)c2[nH]cnc2n(C)c1=O",
-        molecular_weight=180.17,
-        source="experimental",
-        properties=CompoundProperties(
-            physicochemical=PhysicochemicalProperties(logp=_p(-0.02)),
-            binding=BindingProperties(
-                fu_p=_p(0.60, "fraction"),
-                fu_inc=_p(1.0, "fraction"),
-                bp_ratio=_p(0.85, "ratio"),
-            ),
-            metabolism=MetabolismProperties(clint_uL_min_mg=_p(1.8, "uL/min/mg")),
-            renal=RenalProperties(clrenal_L_h=_p(0.1, "L/h")),
-        ),
-    )
-    return BenchmarkCompound(
-        compound=cfg,
-        dose_mg=100.0,
-        duration_h=168.0,
-        compound_type_override=None,
-        observed={"cl": 2.9, "vss": 35.0, "t_half": 8.0},
-        strict_targets=True,
-    )
+    rows_no_override: list[PanelRow] = []
+    rows_with_override: list[PanelRow] = []
 
+    for entry in panel:
+        stripped_props = _without_kp_overrides(entry.compound.properties)
+        stripped = entry.compound.model_copy(update={"properties": stripped_props})
 
-def midazolam() -> BenchmarkCompound:
-    cfg = CompoundConfig(
-        name="midazolam",
-        smiles="Cc1ncc2n1-c1ccc(Cl)cc1C(c1ccccc1F)=NC2",
-        molecular_weight=325.77,
-        source="experimental",
-        properties=CompoundProperties(
-            physicochemical=PhysicochemicalProperties(
-                logp=_p(3.89),
-                pka_base=_p(6.2),
-            ),
-            binding=BindingProperties(
-                fu_p=_p(0.03, "fraction"),
-                fu_inc=_p(0.96, "fraction"),
-                bp_ratio=_p(0.66, "ratio"),
-            ),
-            metabolism=MetabolismProperties(clint_uL_min_mg=_p(93.0, "uL/min/mg")),
-            renal=RenalProperties(clrenal_L_h=_p(0.0, "L/h")),
-        ),
-    )
-    return BenchmarkCompound(
-        compound=cfg,
-        dose_mg=5.0,
-        duration_h=168.0,
-        compound_type_override="base",
-        observed={"cl": 21.0, "vss": 66.0, "t_half": 3.0},
-        strict_targets=False,  # known R&R over-prediction for weak bases
-    )
+        rows_no_override.append(_run_one(stripped, entry, mode="no_override"))
+        rows_with_override.append(_run_one(entry.compound, entry, mode="with_override"))
 
-
-def _run_one(bc: BenchmarkCompound, target_fold: float) -> tuple[bool, dict]:
-    pipe = Pipeline(
-        compound=bc.compound,
-        route="iv_bolus",
-        dose_mg=bc.dose_mg,
-        duration_h=bc.duration_h,
-        compound_type_override=bc.compound_type_override,
-    )
-    result = pipe.run()
-    pk = result.pk_parameters
-    pred = {
-        "cl": pk.cl_apparent,
-        "vss": pk.vss,
-        "t_half": pk.half_life,
+    summaries = {
+        "no_override": aggregate_summary(rows_no_override, mode="no_override"),
+        "with_override": aggregate_summary(rows_with_override, mode="with_override"),
     }
-
-    print(f"\n{'=' * 72}")
-    print(f"Compound: {bc.compound.name}  (dose={bc.dose_mg} mg IV bolus)")
-    print(f"Target fold: <= {target_fold}x   Strict gate: {bc.strict_targets}")
-    print("-" * 72)
-    print(f"{'Metric':<12} {'Predicted':>12} {'Observed':>12} {'Fold Err':>10} {'Verdict':>10}")
-    print("-" * 72)
-    all_pass = True
-    for metric in ("cl", "vss", "t_half"):
-        p = pred[metric]
-        o = bc.observed[metric]
-        if p is None or p <= 0:
-            verdict = "ERROR"
-            fe = float("inf")
-            all_pass = False
-        else:
-            fe = fold_error(p, o)
-            verdict = "PASS" if fe <= target_fold else "FAIL"
-            if verdict == "FAIL":
-                all_pass = False
-        print(f"{metric:<12} {p if p is not None else 0:>12.3f} {o:>12.3f} {fe:>10.3f} {verdict:>10}")
-    print("-" * 72)
-    print(f"PBPK params:")
-    print(f"  compound_type    = {result.metadata['compound_type']}")
-    print(f"  fu_b             = {result.metadata['fu_b']:.6f}")
-    print(f"  CLint_liver_L_h  = {result.metadata['clint_liver_L_h']:.3f}")
-    print(f"  CL_renal_L_h     = {result.metadata['cl_renal_L_h']:.3f}")
-    print(f"  solver_method    = {result.metadata['solver_method']}")
-    print(f"  solver_nfev      = {result.metadata['solver_nfev']}")
-
-    return all_pass, pred
+    rows = {
+        "no_override": rows_no_override,
+        "with_override": rows_with_override,
+    }
+    return summaries, rows
 
 
-def main() -> int:
-    target_fold = 2.0
-    print("=" * 72)
-    print("Charon Layer 2 Human PBPK Benchmark")
-    print("=" * 72)
+def _print_panel_table(rows: list[PanelRow], title: str) -> None:
+    print()
+    print(title)
+    print("-" * 100)
+    header = (
+        f"{'compound':<14}"
+        f"{'CL_pred':>10}{'CL_obs':>10}{'f_CL':>8}  |"
+        f"{'Vss_pred':>10}{'Vss_obs':>10}{'f_Vss':>8}  |"
+        f"{'t_pred':>10}{'t_obs':>10}{'f_t':>8}  "
+        f"{'verdict':>8}"
+    )
+    print(header)
+    print("-" * 100)
+    for r in rows:
+        verdict = "PASS" if all(r.pass_2_fold.values()) else "FAIL"
+        if r.strict_targets:
+            verdict = verdict + "*"
+        print(
+            f"{r.key:<14}"
+            f"{r.predicted['cl_L_h']:>10.3f}{r.observed['cl_L_h']:>10.3f}"
+            f"{r.fold['cl_L_h']:>8.2f}  |"
+            f"{r.predicted['vss_L']:>10.2f}{r.observed['vss_L']:>10.2f}"
+            f"{r.fold['vss_L']:>8.2f}  |"
+            f"{r.predicted['t_half_h']:>10.2f}{r.observed['t_half_h']:>10.2f}"
+            f"{r.fold['t_half_h']:>8.2f}  "
+            f"{verdict:>8}"
+        )
 
-    panel = [theophylline(), midazolam()]
 
-    gated_failures = 0
-    for bc in panel:
-        passed, _pred = _run_one(bc, target_fold=target_fold)
-        if bc.strict_targets and not passed:
-            gated_failures += 1
+def _print_summary(summary: PanelSummary, title: str) -> None:
+    print()
+    print(f"{title}  (n={summary.n})")
+    print(
+        f"  AAFE         CL: {summary.aafe['cl_L_h']:.2f}   "
+        f"Vss: {summary.aafe['vss_L']:.2f}   "
+        f"t_half: {summary.aafe['t_half_h']:.2f}"
+    )
+    print(
+        f"  within 2x    CL: {summary.within_2_fold['cl_L_h']*100:.0f}%   "
+        f"Vss: {summary.within_2_fold['vss_L']*100:.0f}%   "
+        f"t_half: {summary.within_2_fold['t_half_h']*100:.0f}%"
+    )
+    print(
+        f"  within 3x    CL: {summary.within_3_fold['cl_L_h']*100:.0f}%   "
+        f"Vss: {summary.within_3_fold['vss_L']*100:.0f}%   "
+        f"t_half: {summary.within_3_fold['t_half_h']*100:.0f}%"
+    )
+    print(f"  strict gate failures: {summary.strict_failures}")
 
-    print("\n" + "=" * 72)
-    if gated_failures == 0:
-        print("ALL STRICT-TARGET COMPOUNDS PASS (2-fold on CL, Vss, t_half)")
+
+def main(panel_path: Path | None = None) -> int:
+    panel_path = panel_path or DEFAULT_PANEL_PATH
+    summaries, rows = run_benchmark(panel_path)
+
+    print("=" * 100)
+    print("Charon Layer 2 Human PBPK Benchmark — Obach 1999 Tier-1 Panel")
+    print("=" * 100)
+
+    _print_panel_table(rows["no_override"], "R&R only (no empirical overrides)")
+    _print_summary(summaries["no_override"], "Panel summary — R&R only")
+
+    _print_panel_table(rows["with_override"], "R&R + empirical overrides")
+    _print_summary(summaries["with_override"], "Panel summary — with overrides")
+
+    # Report applied overrides
+    applied = [r for r in rows["with_override"] if r.override_tissues]
+    if applied:
+        print()
+        print("Overrides applied:")
+        for r in applied:
+            for tissue in r.override_tissues:
+                print(f"  {r.key}: {tissue}")
+
+    print("=" * 100)
+    strict_failures = summaries["with_override"].strict_failures
+    if strict_failures == 0:
+        print("All strict-targets compounds PASS — exit 0")
     else:
-        print(f"{gated_failures} STRICT-TARGET COMPOUND(S) FAILED")
-    print("=" * 72)
+        print(f"{strict_failures} strict-targets compound(s) FAILED — exit 1")
+    print("=" * 100)
 
-    return 0 if gated_failures == 0 else 1
+    return 0 if strict_failures == 0 else 1
 
 
 if __name__ == "__main__":

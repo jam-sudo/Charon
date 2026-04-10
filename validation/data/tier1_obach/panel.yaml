@@ -1,0 +1,99 @@
+# Obach 1999 Tier-1 Human IV PK Validation Panel
+# Observed CL/Vss/t_half values from Obach RS, Drug Metab Dispos
+# 27(11):1350-1359, 1999, Table 6 (in vivo human PK).  obach_table_row
+# fields refer to Table 6 row numbers (verify against paper copy).
+name: "Obach 1999 Tier-1 Human IV PK Validation Panel"
+source: "Obach RS, Drug Metab Dispos 27(11):1350-1359, 1999"
+default_duration_h: 168.0
+
+compounds:
+  - key: theophylline
+    compound_file: compounds/theophylline.yaml
+    route: iv_bolus
+    dose_mg: 100.0
+    duration_h: 168.0
+    observed: {cl_L_h: 2.9, vss_L: 35.0, t_half_h: 8.0}
+    obach_table_row: 42
+    strict_targets: true
+    notes: "Neutral low-logP primary validation compound."
+
+  - key: antipyrine
+    compound_file: compounds/antipyrine.yaml
+    route: iv_bolus
+    dose_mg: 500.0
+    observed: {cl_L_h: 2.8, vss_L: 43.0, t_half_h: 11.0}
+    obach_table_row: 3
+    strict_targets: false
+    notes: "Neutral phenotyping probe, low extraction."
+
+  - key: caffeine
+    compound_file: compounds/caffeine.yaml
+    route: iv_bolus
+    dose_mg: 250.0
+    observed: {cl_L_h: 6.0, vss_L: 42.0, t_half_h: 4.9}
+    obach_table_row: 6
+    strict_targets: false
+    notes: "Neutral, CYP1A2 substrate, low clearance."
+
+  - key: warfarin
+    compound_file: compounds/warfarin.yaml
+    route: iv_bolus
+    dose_mg: 15.0
+    observed: {cl_L_h: 0.19, vss_L: 11.0, t_half_h: 37.0}
+    obach_table_row: 43
+    strict_targets: false
+    notes: "Highly bound acid (fu_p 0.012), CYP2C9."
+
+  - key: diclofenac
+    compound_file: compounds/diclofenac.yaml
+    route: iv_bolus
+    dose_mg: 50.0
+    observed: {cl_L_h: 16.0, vss_L: 13.0, t_half_h: 1.2}
+    obach_table_row: 14
+    strict_targets: false
+    notes: "Acid, fu_p edge case (0.005), mid extraction."
+
+  - key: midazolam
+    compound_file: compounds/midazolam.yaml
+    route: iv_bolus
+    dose_mg: 5.0
+    observed: {cl_L_h: 21.0, vss_L: 66.0, t_half_h: 3.0}
+    obach_table_row: 24
+    strict_targets: false
+    notes: "Weak base, CYP3A4. R&R limitation; override demo target."
+
+  - key: propranolol
+    compound_file: compounds/propranolol.yaml
+    route: iv_bolus
+    dose_mg: 10.0
+    observed: {cl_L_h: 50.0, vss_L: 270.0, t_half_h: 3.9}
+    obach_table_row: 32
+    strict_targets: false
+    notes: "Base, CYP2D6, high extraction."
+
+  - key: diazepam
+    compound_file: compounds/diazepam.yaml
+    route: iv_bolus
+    dose_mg: 5.0
+    observed: {cl_L_h: 1.6, vss_L: 77.0, t_half_h: 43.0}
+    obach_table_row: 13
+    strict_targets: false
+    notes: "Weak base, neutral-for-R&R (pKa_base 3.4); long t_half."
+
+  - key: metoprolol
+    compound_file: compounds/metoprolol.yaml
+    route: iv_bolus
+    dose_mg: 10.0
+    observed: {cl_L_h: 63.0, vss_L: 290.0, t_half_h: 4.0}
+    obach_table_row: 23
+    strict_targets: false
+    notes: "Base, CYP2D6 population mean."
+
+  - key: verapamil
+    compound_file: compounds/verapamil.yaml
+    route: iv_bolus
+    dose_mg: 10.0
+    observed: {cl_L_h: 60.0, vss_L: 350.0, t_half_h: 4.0}
+    obach_table_row: 47
+    strict_targets: false
+    notes: "Base, CYP3A4, ER≈0.95 engine stress test."
