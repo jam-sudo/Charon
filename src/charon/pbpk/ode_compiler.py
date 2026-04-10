@@ -133,6 +133,14 @@ def build_compound_pbpk_params(
         If supplied, use this value instead of running the bridge's renal
         clearance estimator.  Enables compounds with experimental renal CL.
     """
+    if topology.species != "human":
+        raise NotImplementedError(
+            f"build_compound_pbpk_params currently hardcodes human "
+            f"mppgl=40.0, hepatocellularity=120.0. "
+            f"species={topology.species!r} requires species-aware values; "
+            f"fix scheduled for Sprint 4 (translational layer)."
+        )
+
     props = compound.properties
     logp = _require(_get_property_value(props.physicochemical.logp), "logp")
     pka_acid = _get_property_value(props.physicochemical.pka_acid)
