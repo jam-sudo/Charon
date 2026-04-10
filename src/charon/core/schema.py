@@ -211,6 +211,33 @@ class RenalProperties(BaseModel):
     active_secretion: bool = False
 
 
+class DistributionProperties(BaseModel):
+    """Distribution-related compound properties.
+
+    Currently holds only the empirical Kp override. Forward-compatible
+    for Vss_pred, tissue fu_tissue, binding capacity etc.
+    """
+
+    empirical_kp_by_tissue: dict[str, PredictedProperty] | None = None
+
+    @field_validator("empirical_kp_by_tissue")
+    @classmethod
+    def _validate_kp_values(cls, v):
+        if v is None:
+            return v
+        if not v:
+            raise ValueError(
+                "empirical_kp_by_tissue must be None or a non-empty dict"
+            )
+        for tissue, p in v.items():
+            if p.value <= 0 or p.value > 200:
+                raise ValueError(
+                    f"empirical_kp_by_tissue[{tissue!r}] = {p.value} "
+                    f"outside physiological range (0, 200]"
+                )
+        return v
+
+
 # ---------------------------------------------------------------------------
 # Compound-level aggregates
 # ---------------------------------------------------------------------------
