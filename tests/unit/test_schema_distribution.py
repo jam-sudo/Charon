@@ -72,3 +72,28 @@ class TestDistributionPropertiesValidation:
             empirical_kp_by_tissue={"adipose": self._mk_kp(200.0)}
         )
         assert dp.empirical_kp_by_tissue["adipose"].value == 200.0
+
+
+class TestPhysicochemicalCompoundType:
+    def test_default_is_none(self):
+        pc = PhysicochemicalProperties()
+        assert pc.compound_type is None
+
+    def test_all_literal_values_accepted(self):
+        for ct in ("neutral", "acid", "base", "zwitterion"):
+            pc = PhysicochemicalProperties(compound_type=ct)
+            assert pc.compound_type == ct
+
+    def test_invalid_value_rejected(self):
+        with pytest.raises(ValidationError):
+            PhysicochemicalProperties(compound_type="polymer")  # type: ignore[arg-type]
+
+    def test_coexists_with_logp_pka(self):
+        pc = PhysicochemicalProperties(
+            logp=PredictedProperty(value=3.89, source="experimental"),
+            pka_base=PredictedProperty(value=6.2, source="experimental"),
+            compound_type="base",
+        )
+        assert pc.logp.value == 3.89
+        assert pc.pka_base.value == 6.2
+        assert pc.compound_type == "base"

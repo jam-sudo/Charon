@@ -170,6 +170,9 @@ class PhysicochemicalProperties(BaseModel):
     pka_acid: PredictedProperty | None = None
     pka_base: PredictedProperty | None = None
     solubility_ug_ml: PredictedProperty | None = None
+    compound_type: Literal[
+        "neutral", "acid", "base", "zwitterion"
+    ] | None = None
 
 
 class PermeabilityProperties(BaseModel):
