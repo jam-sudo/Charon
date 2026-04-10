@@ -77,6 +77,32 @@ panel; the CI/test gates check only the regression invariants below.
   the override injection is small (one tissue on one compound), the
   panel metric movement will be small.
 
+**Acceptance of residual scientific gap:**
+This session may conclude with a measured `AAFE_Vss` that is still
+above the ARCHITECTURE target of 3.0 (the session only enforces a
+5.0 sanity floor to catch catastrophic breakage). If that happens, the
+session is still complete — but the *next* session must explicitly
+decide whether to pursue Kp model work (Berezhkovskiy defaults revisit,
+Poulin-Theil adipose branch, new Kp methods) or to accept the
+limitation as documented and move on to ACAT. That decision is made
+with a concrete measurement in hand, which is exactly why this session
+exists.
+
+**Override demonstration target (minimum ≥2 compounds):**
+The single-compound override demo (midazolam only) is too thin — if
+its citation verification fails and falls to Fallback 3
+(`source: synthetic_test`), the with-override pass would be
+indistinguishable from no-override and the session loses its
+demonstration value. Therefore the DoD requires **at least two
+compounds with verified-citation empirical Kp overrides** before
+declaring the session done. Primary: midazolam (adipose, from
+Björkman PBPK literature). Secondary: propranolol or diazepam
+(tissue to be selected during curation based on which compound and
+tissue combination has clean literature coverage — primary candidate
+sources: Rodgers 2005 Table 4, Poulin & Theil 2002). If fewer than 2 verified overrides can be
+committed, the session is incomplete and the implementation plan
+must explicitly escalate (do not silently degrade to Fallback 3).
+
 ---
 
 ## 3. Architecture
@@ -229,17 +255,39 @@ return CompoundPBPKParams(
 )
 ```
 
-**3.2.4 Hardcoded mppgl/hepatocellularity — flagged, not fixed**
+**3.2.4 Hardcoded mppgl/hepatocellularity — flagged AND guarded**
 
 `build_compound_pbpk_params` currently passes `mppgl=40.0` and
 `hepatocellularity=120.0` to `bridge.clint_to_clh`. These are human
 values. This is correct for Sprint 3a/3b (human-only) but will be a
-latent bug in Sprint 4 (rat/dog). This session does NOT fix it. A
-`KNOWN_FUTURE_WORK.md` section in the session summary will document the
-fix path: "read `mppgl` and `hepatocellularity` from `topology` before
-Sprint 4 preclinical validation". Adding those fields to `PBPKTopology`
-is a small change but out of scope here — doing it without species
-validation adds risk without reward.
+latent bug in Sprint 4 (rat/dog).
+
+This session does NOT fix the hardcoding (adding species-aware
+`PBPKTopology.mppgl_mg_g` / `hepatocellularity_1e6_per_g` fields would
+require preclinical validation to land safely, and that validation is
+explicitly out of scope). But this session DOES add a **species guard**
+at the top of `build_compound_pbpk_params` to ensure non-human topology
+cannot silently consume human constants:
+
+```python
+if topology.species != "human":
+    raise NotImplementedError(
+        f"build_compound_pbpk_params currently hardcodes human "
+        f"mppgl=40.0, hepatocellularity=120.0. "
+        f"species={topology.species!r} requires species-aware values; "
+        f"fix scheduled for Sprint 4 (translational layer)."
+    )
+```
+
+Rationale: 2 lines of code block a class of silent-failure bugs for the
+small price of a clear error message. If anyone (including a future
+session) tries to run the current builder on rat/dog topology, they
+hit a loud wall and know exactly what needs to change.
+
+The `KNOWN_FUTURE_WORK` section in the final commit message still
+documents the fix path: "add `mppgl_mg_g` and `hepatocellularity_1e6_per_g`
+to `PBPKTopology`, read from species YAML, remove guard". That is
+Sprint 4 work.
 
 ### 3.3 `CompoundPBPKParams` audit additions
 
@@ -483,6 +531,68 @@ The 3 neutrals anchor the panel to "R&R works fine here" baseline. The
 in healthy adults is less standard than the others. Documented as a gap;
 zwitterion coverage deferred until a reliable IV reference is identified.
 
+### 4.6 Known curation gotchas (for the implementation plan)
+
+Hand-authoring 10 YAMLs with per-field citations is a 2-3 hour curation
+effort, not a trivial pattern-fill. The following per-compound
+pharmacological judgments must be decided at curation time and recorded
+as YAML comments + commit message notes:
+
+1. **Warfarin stereoisomer.** Obach 1999 Table 2 reports a single
+   "warfarin" row whose values may be racemic or S-specific. The
+   curation task MUST verify which form the reported values correspond
+   to, and the YAML must declare it explicitly
+   (`name: "warfarin (S-enantiomer)"` or equivalent). Mis-stating the
+   form is a scientific error that would poison the AAFE metric.
+
+2. **Diazepam classification.** Diazepam has `pKa_base ≈ 3.4`, well
+   below R&R's "moderate-to-strong base" threshold of 7. At
+   physiological pH, diazepam is predominantly neutral, so
+   `compound_type: "neutral"` (NOT "base") is pharmacologically correct
+   for the R&R Kp calculation. Document the decision in the YAML and
+   confirm against the `infer_compound_type` default (which would also
+   say neutral since `pKa_base > 8.0` is required). This is opposite to
+   midazolam (pKa_base 6.2, too low for default base threshold but
+   correctly set to "base" at the YAML level because of its experimental
+   behavior).
+
+3. **Diclofenac fu_p edge case.** Diclofenac `fu_p ≈ 0.005` triggers
+   the ParameterBridge "very low fu_p" warning (threshold 0.01 per
+   CLAUDE.md §6j Pitfall #10). The warning is expected; the YAML must
+   include a comment acknowledging it, and the benchmark must not treat
+   the warning as a failure.
+
+4. **Verapamil ER ≈ 0.95.** Verapamil runs the well-stirred liver
+   model at the extreme saturation limit where `CLh ≈ Q_H`. Small
+   errors in `fu_b` or `CLint_liver` cause large fold errors in CL
+   prediction. Expect a wider fold error for verapamil than for the
+   other compounds; this is the engine stress test, not a bug.
+
+5. **CYP2D6 poor-metabolizer variability.** Metoprolol is a CYP2D6
+   substrate; Obach reports population-mean CL. Individual variability
+   is large but out of scope for point-estimate PBPK. The YAML cites
+   the population-mean value explicitly.
+
+6. **Obach table row numbering.** Obach 1999 Table 2 (in vitro) and
+   Table 6 (in vivo) use different row orderings. Each compound YAML
+   and panel entry must cite BOTH tables' row references
+   (`obach_table_2_row` for in vitro values, `obach_table_6_row` /
+   `obach_table_row` for observed CL/Vss/t½). The design's earlier
+   `obach_table_row` field refers to Table 6 (observed PK).
+
+7. **Contingency — compound unavailable.** If any one of the 10
+   compounds cannot be curated from Obach 1999 with acceptable data
+   quality (e.g., observed CL/Vss measured in patients, not healthy
+   volunteers, or IV data missing), the implementation plan is
+   permitted to **swap** the compound for a close substitute within
+   the same class (e.g., replace warfarin with tolbutamide,
+   metoprolol with atenolol). The swap is logged in the session
+   commit message; the panel size of 10 is preserved.
+
+These gotchas live here in the spec (not the plan) because they are
+*decisions* requiring pharmacological judgment, not *tasks*. The plan
+references this section when authoring the curation steps.
+
 ---
 
 ## 5. Benchmark Harness Refactor
@@ -558,20 +668,42 @@ main(panel_path):
 
 **Two-pass rationale**: running each compound twice (with and without
 empirical override) produces the side-by-side "what did the override
-actually change" report. For the 9 compounds without overrides, both
-passes are identical and the table renders them once with a dash. Only
-compounds that actually have an override (midazolam, and any others
-added later) contribute to the delta.
+actually change" report. For the 8 compounds without overrides, both
+passes are identical; the compounds with overrides (midazolam + at
+least one more per DoD §2) are the only rows that actually move
+between the two passes.
 
-The strip function:
+**Presentation discretion (implementation-time)**: the spec example
+below prints both full tables for visual symmetry, but the
+implementation is free to collapse the "with overrides" table to show
+only the rows that differ from the "R&R only" baseline (plus a
+"unchanged: N compounds" summary line). Either rendering is acceptable
+so long as the panel-level AAFE summaries are printed for BOTH modes
+and per-compound fold errors are retrievable from the returned summary
+object for downstream use.
+
+The strip function uses **nested** `model_copy` so that any future
+additions to `DistributionProperties` (e.g. `vss_pred`, `tissue_fu`) are
+preserved instead of being silently reset to defaults:
 
 ```python
 def _without_kp_overrides(props: CompoundProperties) -> CompoundProperties:
-    """Return a copy of props with empirical_kp_by_tissue cleared."""
-    return props.model_copy(
-        update={'distribution': DistributionProperties(empirical_kp_by_tissue=None)}
+    """Return a copy of props with empirical_kp_by_tissue cleared.
+
+    Uses nested model_copy so other fields of DistributionProperties
+    that may be added in future (e.g. Vss_pred, tissue-level fu) are
+    preserved rather than silently reset to their defaults.
+    """
+    new_distribution = props.distribution.model_copy(
+        update={'empirical_kp_by_tissue': None}
     )
+    return props.model_copy(update={'distribution': new_distribution})
 ```
+
+A unit test in `test_panel_loader.py` must verify that if
+`DistributionProperties` ever gains a new field, the strip function
+preserves it (a forward-compat guardrail test using a local subclass
+or monkey-patched field suffices).
 
 ### 5.3 Stdout format
 
@@ -882,11 +1014,22 @@ The user granted autonomous execution authority for this session
 - [ ] Observed PK lives in `panel.yaml`, not in `CompoundConfig`
 - [ ] Two-pass benchmark reports both no-override and with-override
       metrics
-- [ ] midazolam override value requires verified citation (fallback plan
-      documented)
+- [ ] `_without_kp_overrides` uses nested `model_copy` to preserve
+      future `DistributionProperties` fields
+- [ ] `build_compound_pbpk_params` adds `species != "human"` guard
+      to surface Sprint 4 TODO loudly
+- [ ] Override demo requires **≥2** compounds with verified citations
+      before session is complete
+- [ ] Override numerical values require verified citations (3-tier
+      fallback plan documented)
+- [ ] Per-compound curation gotchas (diazepam classification,
+      warfarin stereoisomer, diclofenac fu_p, verapamil ER) documented
+- [ ] Compound-swap contingency permitted within same class
 - [ ] No Kp model change, no KP_MAX change, no new Kp method
 - [ ] No ACAT, no oral, no rat/dog
-- [ ] `mppgl`/`hepatocellularity` hardcoded issue is documented as known
-      future work, not fixed
+- [ ] `mppgl`/`hepatocellularity` hardcoded issue is **guarded** (not
+      fixed) and documented as known future work
 - [ ] Theophylline strict 2-fold gate retained
 - [ ] Session post-condition: AAFE_Vss (with-override) < 5.0 sanity floor
+- [ ] Residual scientific gap (measured AAFE may exceed ARCHITECTURE
+      target) is explicitly accepted as session outcome
