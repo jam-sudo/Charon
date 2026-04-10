@@ -24,6 +24,8 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+import yaml
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
@@ -43,6 +45,97 @@ from validation.benchmarks.metrics import fold_error  # noqa: E402
 def _p(value: float, unit: str = "") -> PredictedProperty:
     return PredictedProperty(value=float(value), source="experimental", unit=unit)
 
+
+# ---------------------------------------------------------------------------
+# Sprint 3b: Panel loader — PanelEntry dataclass and load_panel()
+# The Sprint 3a BenchmarkCompound / theophylline() / midazolam() factories
+# below remain unchanged and will be removed in Task 14.
+# ---------------------------------------------------------------------------
+
+@dataclass
+class PanelEntry:
+    key: str
+    compound: CompoundConfig
+    route: str
+    dose_mg: float
+    duration_h: float
+    observed: dict[str, float]
+    strict_targets: bool
+    obach_table_row: int | None
+    notes: str
+
+
+def load_panel(panel_path: Path) -> list[PanelEntry]:
+    """Load a panel.yaml file and all compound files it references.
+
+    `panel.yaml` format::
+
+        name: "..."
+        source: "..."
+        default_duration_h: 168.0
+        compounds:
+          - key: theophylline
+            compound_file: compounds/theophylline.yaml
+            route: iv_bolus
+            dose_mg: 100.0
+            duration_h: 168.0          # optional; falls back to default_duration_h
+            observed:
+              cl_L_h: 2.9
+              vss_L: 35.0
+              t_half_h: 8.0
+            obach_table_row: 42        # optional
+            strict_targets: true
+            notes: "..."               # optional
+
+    Returns a list of `PanelEntry` objects with fully-loaded
+    `CompoundConfig` instances.
+    """
+    panel_path = Path(panel_path)
+    with panel_path.open() as f:
+        raw = yaml.safe_load(f)
+
+    default_duration = float(raw.get("default_duration_h", 168.0))
+    entries: list[PanelEntry] = []
+
+    for idx, item in enumerate(raw["compounds"]):
+        # Resolve compound file relative to the panel's directory
+        compound_file = panel_path.parent / item["compound_file"]
+        if not compound_file.exists():
+            raise FileNotFoundError(
+                f"panel.yaml entry #{idx} ({item.get('key', '?')}) "
+                f"references missing compound file: {compound_file}"
+            )
+        with compound_file.open() as cf:
+            compound_data = yaml.safe_load(cf)
+        compound = CompoundConfig.model_validate(compound_data)
+
+        # Observed PK keys are required (KeyError surfaces typos early)
+        observed = {
+            "cl_L_h": float(item["observed"]["cl_L_h"]),
+            "vss_L": float(item["observed"]["vss_L"]),
+            "t_half_h": float(item["observed"]["t_half_h"]),
+        }
+
+        entries.append(
+            PanelEntry(
+                key=str(item["key"]),
+                compound=compound,
+                route=str(item["route"]),
+                dose_mg=float(item["dose_mg"]),
+                duration_h=float(item.get("duration_h", default_duration)),
+                observed=observed,
+                strict_targets=bool(item["strict_targets"]),
+                obach_table_row=item.get("obach_table_row"),
+                notes=str(item.get("notes", "")),
+            )
+        )
+
+    return entries
+
+
+# ---------------------------------------------------------------------------
+# Sprint 3a: BenchmarkCompound Python factories (removed in Task 14)
+# ---------------------------------------------------------------------------
 
 @dataclass
 class BenchmarkCompound:
