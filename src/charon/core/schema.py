@@ -124,6 +124,14 @@ class HepaticClearance(BaseModel):
     extraction_ratio: float
     model_used: str
     conversion_log: ConversionLog
+    clint_liver_L_h: float | None = None
+    """Whole-liver intrinsic clearance after IVIVE scaling, in L/h.
+
+    This is the value *before* the liver extraction model is applied.  It
+    is the correct input for PBPK ODEs that embed well-stirred elimination
+    directly (rate_elim = CLint_liver * fu_b * C_liver_blood_out).  Using
+    ``clh_L_h`` instead in a PBPK rhs would double-apply the liver model.
+    """
 
 
 # ---------------------------------------------------------------------------

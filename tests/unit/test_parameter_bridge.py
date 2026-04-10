@@ -164,3 +164,24 @@ class TestRenalClearance:
     def test_fu_p_out_of_range_raises(self, bridge):
         with pytest.raises(ValueError):
             bridge.assign_renal_clearance(fu_p=1.5)
+
+
+class TestHepaticClearanceClintLiverField:
+    """The clint_liver_L_h field is needed by PBPK ODEs to avoid re-scaling."""
+
+    def test_clint_liver_L_h_populated_hlm(self, bridge):
+        """For HLM with the ARCHITECTURE example, CLint_liver = 64.377 L/h."""
+        result = bridge.clint_to_clh(
+            clint=15.2, fu_inc=0.85, fu_p=0.23, bp_ratio=0.95, qh_L_h=90.0
+        )
+        # Hand calc: 15.2/0.85 * 40 * 1500 / 1e6 * 60 = 64.377 L/h
+        assert result.clint_liver_L_h == pytest.approx(64.377, rel=1e-3)
+
+    def test_clint_liver_L_h_populated_hepatocytes(self, bridge):
+        """For hepatocytes: CLint_u = CLint (no fu_inc correction)."""
+        result = bridge.clint_to_clh(
+            clint=10.0, fu_inc=0.85, fu_p=0.5, bp_ratio=1.0,
+            system="hepatocytes"
+        )
+        # Hand calc: 10.0 * 120 * 1500 / 1e6 * 60 = 108.0 L/h
+        assert result.clint_liver_L_h == pytest.approx(108.0, rel=1e-6)

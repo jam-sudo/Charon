@@ -248,6 +248,7 @@ class ParameterBridge:
             extraction_ratio=extraction_ratio,
             model_used=model,
             conversion_log=conversion_log,
+            clint_liver_L_h=clint_liver_L_h,
         )
 
     # ------------------------------------------------------------------
