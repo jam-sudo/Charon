@@ -1,0 +1,35 @@
+{
+  "xgboost_clint": {
+    "feature_length": 2057,
+    "model_name": "xgboost_clint",
+    "n_folds": 5,
+    "n_samples": 1441,
+    "notes": "Target: log10(CLint) in uL/min/10^6 cells, clipped to [0.1, 1000]. Scaffold 5-fold GroupKFold. Sources biogen_fang and tdc_mic explicitly excluded (unit mismatch).",
+    "pct_within_2fold": 46.28730048577377,
+    "pct_within_3fold": 66.41221374045801,
+    "scaffold_cv_aafe": 2.4852904080534666,
+    "scaffold_cv_mae": 0.3953771436713922,
+    "scaffold_cv_r2": 0.29475539424051156,
+    "target": "log10(clint_hep_uL_min_10e6_cells)",
+    "training_sources": [
+      "tdc_hep",
+      "chembl"
+    ]
+  },
+  "xgboost_fup": {
+    "feature_length": 2057,
+    "model_name": "xgboost_fup",
+    "n_folds": 5,
+    "n_samples": 1572,
+    "notes": "Target: log10(fup). Scaffold 5-fold GroupKFold on Murcko scaffolds. Validation set (adme_reference.csv InChIKey-14) excluded from training.",
+    "pct_within_2fold": 48.918575063613225,
+    "pct_within_3fold": 67.55725190839695,
+    "scaffold_cv_aafe": 2.4758918887693016,
+    "scaffold_cv_mae": 0.39374763426417275,
+    "scaffold_cv_r2": 0.4782353759365241,
+    "target": "log10(fup)",
+    "training_sources": [
+      "tdc_ppbr_az (Homo sapiens)"
+    ]
+  }
+}

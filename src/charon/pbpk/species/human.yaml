@@ -1,0 +1,132 @@
+# Charon human physiological parameters (ICRP Reference Man).
+#
+# Tissue compositions (fn, fp, fw, pH) ported verbatim from
+# Sisyphus/data/physiology/reference_man.yaml, which in turn follows
+# Rodgers & Rowland (2006) Table 1. The port is verified to ±1e-10
+# against sisyphus.predict.ivive._TISSUE_COMPOSITIONS.
+#
+# Note: blood_flow_fraction values are fractions of cardiac output.
+# They sum to 1.0 across all systemic branches. The liver receives
+# blood from two paths (hepatic artery + portal vein) which are
+# modelled explicitly in the PBPK graph; the listed `blood_flow_fraction`
+# under liver is the *total* hepatic input (0.065 arterial + 0.19
+# portal = 0.255).
+
+species:
+  name: human
+  body_weight_kg: 70.0
+  cardiac_output_L_h: 390.0
+  hematocrit: 0.45
+
+  liver:
+    weight_g: 1500.0
+    volume_L: 1.80
+    blood_flow_fraction_CO: 0.255     # total = 0.065 arterial + 0.19 portal
+    mppgl_mg_g: 40.0                  # Charon convention (matches Omega)
+    hepatocellularity_1e6_per_g: 120.0
+
+  kidney:
+    weight_g: 310.0
+    volume_L: 0.31
+    blood_flow_fraction_CO: 0.19
+    gfr_mL_min: 120.0
+
+  bsa_scaling:
+    km: 37.0                          # FDA HED Km factor (FDA 2005 guidance)
+
+  blood:
+    venous_volume_L: 3.7
+    arterial_volume_L: 1.5
+    portal_vein_volume_L: 0.05
+
+  # Rodgers & Rowland (2006) plasma reference composition used in Kp calcs.
+  plasma:
+    fn: 0.0023
+    fp: 0.0199
+    fw: 0.945
+    pH: 7.40
+
+  # Tissue compositions — verbatim from Sisyphus reference_man.yaml.
+  tissues:
+    lung:
+      volume_L: 0.50
+      blood_flow_fraction: 1.0        # pulmonary circulation
+      composition: { fn: 0.0030, fp: 0.0128, fw: 0.811, pH: 7.0 }
+
+    brain:
+      volume_L: 1.45
+      blood_flow_fraction: 0.12
+      composition: { fn: 0.0391, fp: 0.0550, fw: 0.620, pH: 7.0 }
+
+    heart:
+      volume_L: 0.33
+      blood_flow_fraction: 0.04
+      composition: { fn: 0.0117, fp: 0.0166, fw: 0.758, pH: 7.0 }
+
+    kidney:
+      volume_L: 0.31
+      blood_flow_fraction: 0.19
+      composition: { fn: 0.0121, fp: 0.0242, fw: 0.783, pH: 7.0 }
+
+    liver:
+      volume_L: 1.80
+      blood_flow_fraction: 0.255       # 0.065 hepatic artery + 0.19 portal
+      composition: { fn: 0.0348, fp: 0.0252, fw: 0.751, pH: 7.0 }
+
+    spleen:
+      volume_L: 0.15
+      blood_flow_fraction: 0.03
+      composition: { fn: 0.0077, fp: 0.0113, fw: 0.788, pH: 7.0 }
+
+    gut_wall:
+      volume_L: 1.03
+      blood_flow_fraction: 0.15
+      composition: { fn: 0.0163, fp: 0.0185, fw: 0.718, pH: 7.0 }
+
+    pancreas:
+      volume_L: 0.10
+      blood_flow_fraction: 0.01
+      composition: { fn: 0.0348, fp: 0.0252, fw: 0.751, pH: 7.0 }
+
+    thymus:
+      volume_L: 0.02
+      blood_flow_fraction: 0.002
+      composition: { fn: 0.0132, fp: 0.0100, fw: 0.700, pH: 7.0 }
+
+    reproductive:
+      volume_L: 0.04
+      blood_flow_fraction: 0.002
+      composition: { fn: 0.0132, fp: 0.0100, fw: 0.700, pH: 7.0 }
+
+    rest:
+      volume_L: 2.50
+      blood_flow_fraction: 0.069
+      composition: { fn: 0.0132, fp: 0.0100, fw: 0.700, pH: 7.0 }
+
+    adipose:
+      volume_L: 14.5                   # total (vascular 0.725 + tissue 13.775)
+      blood_flow_fraction: 0.052
+      composition: { fn: 0.7021, fp: 0.0022, fw: 0.150, pH: 7.0 }
+
+    muscle:
+      volume_L: 28.0
+      blood_flow_fraction: 0.17
+      composition: { fn: 0.0238, fp: 0.0072, fw: 0.760, pH: 7.0 }
+
+    bone:
+      volume_L: 4.86
+      blood_flow_fraction: 0.05
+      composition: { fn: 0.0174, fp: 0.0010, fw: 0.439, pH: 7.0 }
+
+    skin:
+      volume_L: 3.30
+      blood_flow_fraction: 0.05
+      composition: { fn: 0.0284, fp: 0.0111, fw: 0.718, pH: 7.0 }
+
+  # CYP orthologs for cross-species IVIVE (reserved for Phase B).
+  cyp_orthologs:
+    CYP3A4: CYP3A4
+    CYP2D6: CYP2D6
+    CYP2C9: CYP2C9
+    CYP1A2: CYP1A2
+    CYP2E1: CYP2E1
