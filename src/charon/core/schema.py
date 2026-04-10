@@ -23,6 +23,7 @@ SourceType = Literal[
     "derived",
     "physiological",
     "experimental",
+    "literature",
 ]
 """Taxonomy of data-source provenance."""
 
@@ -255,6 +256,7 @@ class CompoundProperties(BaseModel):
     metabolism: MetabolismProperties = MetabolismProperties()
     safety: SafetyProperties = SafetyProperties()
     renal: RenalProperties = RenalProperties()
+    distribution: DistributionProperties = DistributionProperties()
 
 
 class CompoundConfig(BaseModel):

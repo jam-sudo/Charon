@@ -97,3 +97,54 @@ class TestPhysicochemicalCompoundType:
         assert pc.logp.value == 3.89
         assert pc.pka_base.value == 6.2
         assert pc.compound_type == "base"
+
+
+class TestCompoundPropertiesDistributionField:
+    def test_default_distribution_present(self):
+        cp = CompoundProperties()
+        assert cp.distribution is not None
+        assert isinstance(cp.distribution, DistributionProperties)
+        assert cp.distribution.empirical_kp_by_tissue is None
+
+    def test_backward_compat_no_distribution_in_dict(self):
+        """Existing Sprint 3a fixtures (no 'distribution' key) must parse."""
+        cp = CompoundProperties.model_validate({
+            "physicochemical": {
+                "logp": {"value": -0.02, "source": "experimental"},
+            },
+            "binding": {
+                "fu_p": {"value": 0.6, "source": "experimental"},
+            },
+        })
+        assert cp.distribution.empirical_kp_by_tissue is None
+
+    def test_explicit_distribution_round_trip(self):
+        cp = CompoundProperties.model_validate({
+            "distribution": {
+                "empirical_kp_by_tissue": {
+                    "adipose": {"value": 12.0, "source": "literature",
+                                "method": "Björkman 2001"},
+                },
+            },
+        })
+        assert cp.distribution.empirical_kp_by_tissue is not None
+        adipose = cp.distribution.empirical_kp_by_tissue["adipose"]
+        assert adipose.value == 12.0
+        assert adipose.source == "literature"
+        assert adipose.method == "Björkman 2001"
+
+    def test_yaml_like_dump_reload(self):
+        """Serialize → deserialize → identical (audit trail preserved)."""
+        original = CompoundProperties(
+            distribution=DistributionProperties(
+                empirical_kp_by_tissue={
+                    "adipose": PredictedProperty(
+                        value=15.0, source="literature", method="test"
+                    ),
+                }
+            )
+        )
+        dumped = original.model_dump()
+        reloaded = CompoundProperties.model_validate(dumped)
+        assert reloaded.distribution.empirical_kp_by_tissue is not None
+        assert reloaded.distribution.empirical_kp_by_tissue["adipose"].value == 15.0
