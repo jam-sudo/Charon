@@ -21,3 +21,15 @@ properties:
     clint_uL_min_mg: {value: 13.6, source: experimental, unit: uL/min/mg, method: "Obach 1999 Table 2"}
   renal:
     clrenal_L_h: {value: 0.1, source: experimental, unit: L/h, method: "Obach 1999 Table 2"}
+  distribution:
+    # Phase 2 (Sprint 3b Task 17): empirical adipose Kp override with
+    # verified primary citation.  Roberts 2000 reports propranolol
+    # partition coefficients from isolated perfused rat hindlimb:
+    # fat=6.36, muscle=2.79, skin=2.64.  Secondary of ≥2 verified
+    # overrides required by DoD §2.
+    empirical_kp_by_tissue:
+      adipose:
+        value: 6.36
+        source: literature
+        unit: ratio
+        method: "Roberts MS, Wu Z, Weiss M. Eur J Pharm Sci 2000;11(2):165-172 — rat isolated perfused hindlimb Kp_fat"
