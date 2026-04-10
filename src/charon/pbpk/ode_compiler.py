@@ -188,6 +188,34 @@ def build_compound_pbpk_params(
         method="rodgers_rowland",
     )
 
+    # Apply empirical Kp overrides (if any).  This replaces R&R values
+    # tissue-by-tissue with cited literature/experimental Kp; the ODE
+    # is unaware of whether Kp came from R&R or from override.
+    kp_by_tissue_mut = dict(kp_by_tissue)
+    override_log: list[KpOverrideRecord] = []
+    empirical = compound.properties.distribution.empirical_kp_by_tissue
+    if empirical:
+        valid_tissues = set(kp_by_tissue_mut.keys())
+        for tissue, p in empirical.items():
+            if tissue not in valid_tissues:
+                raise ValueError(
+                    f"empirical_kp_by_tissue[{tissue!r}] refers to a tissue "
+                    f"not present in topology {topology.species!r}. "
+                    f"Valid tissues: {sorted(valid_tissues)}"
+                )
+            override_log.append(
+                KpOverrideRecord(
+                    tissue=tissue,
+                    rr_value=float(kp_by_tissue_mut[tissue]),
+                    empirical_value=float(p.value),
+                    source=p.source,
+                    method=p.method,
+                    flag=p.flag,
+                )
+            )
+            kp_by_tissue_mut[tissue] = float(p.value)
+    kp_by_tissue = kp_by_tissue_mut
+
     # Hepatic IVIVE with full audit via ParameterBridge.
     hep = bridge.clint_to_clh(
         clint=clint,
@@ -231,6 +259,7 @@ def build_compound_pbpk_params(
         clint_liver_L_h=clint_liver_L_h,
         cl_renal_L_h=cl_renal_L_h,
         kp_by_tissue=dict(kp_by_tissue),
+        kp_overrides=tuple(override_log),
     )
 
 
