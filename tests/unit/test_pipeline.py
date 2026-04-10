@@ -347,3 +347,127 @@ class TestPipelineMetadataKpOverrides:
         pipe = Pipeline(compound=theo, route="iv_bolus", dose_mg=100.0, duration_h=168.0)
         result = pipe.run()
         assert result.metadata["kp_overrides"] == []
+
+
+class TestPipelineMidazolamOverrideMechanism:
+    """DoD §3 mechanism check: override path is wired end-to-end.
+
+    Uses SYNTHETIC override values (source='experimental', method=
+    'mechanism-test'). Does NOT assert a specific numerical fold-error
+    target — only direction of effect and audit record shape.
+    """
+
+    def _base_midazolam(self, with_override: bool):
+        from charon.core.schema import (
+            BindingProperties, CompoundConfig, CompoundProperties,
+            DistributionProperties, MetabolismProperties,
+            PhysicochemicalProperties, PredictedProperty, RenalProperties,
+        )
+        dist = None
+        if with_override:
+            dist = DistributionProperties(
+                empirical_kp_by_tissue={
+                    "adipose": PredictedProperty(
+                        value=10.0, source="experimental",
+                        method="mechanism-test"
+                    ),
+                }
+            )
+        return CompoundConfig(
+            name="midazolam",
+            smiles="Cc1ncc2n1-c1ccc(Cl)cc1C(c1ccccc1F)=NC2",
+            molecular_weight=325.77,
+            source="experimental",
+            properties=CompoundProperties(
+                physicochemical=PhysicochemicalProperties(
+                    logp=PredictedProperty(value=3.89, source="experimental"),
+                    pka_base=PredictedProperty(value=6.2, source="experimental"),
+                    compound_type="base",
+                ),
+                binding=BindingProperties(
+                    fu_p=PredictedProperty(value=0.03, source="experimental", unit="fraction"),
+                    fu_inc=PredictedProperty(value=0.96, source="experimental", unit="fraction"),
+                    bp_ratio=PredictedProperty(value=0.66, source="experimental", unit="ratio"),
+                ),
+                metabolism=MetabolismProperties(
+                    clint_uL_min_mg=PredictedProperty(value=93.0, source="experimental", unit="uL/min/mg"),
+                ),
+                renal=RenalProperties(
+                    clrenal_L_h=PredictedProperty(value=0.0, source="experimental", unit="L/h"),
+                ),
+                distribution=dist or DistributionProperties(),
+            ),
+        )
+
+    def test_override_reduces_vss(self):
+        """Adipose Kp override reduces tissue uptake → Vss drops."""
+        from charon import Pipeline
+
+        OBSERVED_VSS = 66.0  # L (Obach 1999)
+
+        pipe_no = Pipeline(
+            compound=self._base_midazolam(with_override=False),
+            route="iv_bolus", dose_mg=5.0, duration_h=168.0,
+        )
+        pipe_yes = Pipeline(
+            compound=self._base_midazolam(with_override=True),
+            route="iv_bolus", dose_mg=5.0, duration_h=168.0,
+        )
+        result_no = pipe_no.run()
+        result_yes = pipe_yes.run()
+
+        vss_no = result_no.pk_parameters.vss
+        vss_yes = result_yes.pk_parameters.vss
+
+        assert vss_no is not None and vss_no > 0
+        assert vss_yes is not None and vss_yes > 0
+
+        # Mechanism check: override must reduce the predicted Vss
+        assert vss_yes < vss_no, (
+            f"Override should reduce Vss (adipose Kp 50→10), "
+            f"got vss_no={vss_no:.1f}, vss_yes={vss_yes:.1f}"
+        )
+
+        # Direction-of-effect check: override must move Vss TOWARD
+        # the observed value (not past it in the wrong direction)
+        fold_no = max(vss_no / OBSERVED_VSS, OBSERVED_VSS / vss_no)
+        fold_yes = max(vss_yes / OBSERVED_VSS, OBSERVED_VSS / vss_yes)
+        assert fold_yes <= fold_no, (
+            f"Override must bring Vss closer to observed, "
+            f"fold_no={fold_no:.2f}, fold_yes={fold_yes:.2f}"
+        )
+
+    def test_override_audit_shape(self):
+        from charon import Pipeline
+
+        pipe = Pipeline(
+            compound=self._base_midazolam(with_override=True),
+            route="iv_bolus", dose_mg=5.0, duration_h=168.0,
+        )
+        result = pipe.run()
+        overrides = result.metadata["kp_overrides"]
+        assert len(overrides) == 1
+        assert overrides[0]["tissue"] == "adipose"
+        assert overrides[0]["empirical_value"] == 10.0
+        assert overrides[0]["source"] == "experimental"
+        assert overrides[0]["method"] == "mechanism-test"
+        # rr_value is whatever R&R computed; just check it's positive
+        assert overrides[0]["rr_value"] > 0
+
+    def test_no_override_matches_existing_limitation_case(self):
+        """Without override, the existing Sprint 3a limitation still reproduces."""
+        from charon import Pipeline
+
+        pipe = Pipeline(
+            compound=self._base_midazolam(with_override=False),
+            route="iv_bolus", dose_mg=5.0, duration_h=168.0,
+        )
+        result = pipe.run()
+        # Sprint 3a documented that no-override midazolam is within 4x
+        # of observed CL (relaxed gate). This test asserts the same
+        # loose bound to confirm no unrelated regression.
+        OBSERVED_CL = 21.0
+        cl = result.pk_parameters.cl_apparent
+        assert cl is not None and cl > 0
+        fold_cl = max(cl / OBSERVED_CL, OBSERVED_CL / cl)
+        assert fold_cl < 4.0, f"No-override midazolam CL fold={fold_cl:.2f}"
