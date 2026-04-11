@@ -174,6 +174,9 @@ class PhysicochemicalProperties(BaseModel):
     compound_type: Literal[
         "neutral", "acid", "base", "zwitterion"
     ] | None = None
+    kp_method: Literal[
+        "rodgers_rowland", "poulin_theil", "berezhkovskiy"
+    ] | None = None
 
 
 class PermeabilityProperties(BaseModel):

@@ -179,13 +179,18 @@ def build_compound_pbpk_params(
         name: node.composition for name, node in topology.tissues.items()
     }
 
+    kp_method = (
+        compound.properties.physicochemical.kp_method
+        or "rodgers_rowland"
+    )
     kp_by_tissue = compute_all_kp(
         logp=logp,
         pka=pka_for_kp,
         compound_type=resolved_type,
         tissue_compositions=tissue_comps,
         plasma_composition=topology.plasma_composition,
-        method="rodgers_rowland",
+        method=kp_method,
+        fu_p=fu_p if kp_method == "berezhkovskiy" else None,
     )
 
     # Apply empirical Kp overrides (if any).  This replaces R&R values

@@ -18,6 +18,9 @@ properties:
       source: experimental
       method: "Literature (see commit)"
     compound_type: acid
+    # Session 1.5: BZ correction for highly bound acid (fu_p=0.012) to
+    # mitigate R&R Vss overprediction (fold 30.7x without BZ).
+    kp_method: berezhkovskiy
   binding:
     fu_p: {value: 0.012, source: experimental, unit: fraction, method: "Obach 1999 Table 2"}
     fu_inc: {value: 0.17, source: experimental, unit: fraction, method: "Obach 1999 Table 2"}

@@ -15,6 +15,10 @@ properties:
     # pKa_base 3.4 is too low for R&R base branch (threshold >=7);
     # diazepam behaves as neutral at pH 7.4, so R&R uses the neutral equations.
     compound_type: neutral
+    # Session 1.5: BZ correction for lipophilic neutral with low fu_p
+    # (0.013). Expected to reduce Vss overprediction from fold 11x
+    # toward ~7x via (1 + (Kp-1)*fu_p)^-1 stabilization.
+    kp_method: berezhkovskiy
   binding:
     fu_p: {value: 0.013, source: experimental, unit: fraction, method: "Obach 1999 Table 2"}
     fu_inc: {value: 0.67, source: experimental, unit: fraction, method: "Obach 1999 Table 2"}

@@ -13,6 +13,11 @@ properties:
       source: experimental
       method: "Literature (see commit)"
     compound_type: acid
+    # Session 1.5: BZ correction for extremely bound acid (fu_p=0.005).
+    # Effect is modest because R&R already gives low Kp values for
+    # diclofenac, but consistent with the "BZ for highly bound drugs"
+    # policy.
+    kp_method: berezhkovskiy
   binding:
     fu_p:
       # fu_p < 0.01 triggers the ParameterBridge low-fu_p warning per
