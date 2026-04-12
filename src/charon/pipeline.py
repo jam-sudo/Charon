@@ -26,6 +26,7 @@ from charon.core.parameter_bridge import ParameterBridge
 from charon.core.schema import (
     CompoundConfig,
     CompoundProperties,
+    DoseProjectionConfig,
     PKParameters,
 )
 from charon.pbpk.ode_compiler import build_compound_pbpk_params
@@ -45,6 +46,7 @@ class PipelineResult:
     cp_blood: np.ndarray
     simulation: SimulationResult
     metadata: dict = field(default_factory=dict)
+    dose_recommendation: "FIHDoseRecommendation | None" = None
 
 
 class Pipeline:
@@ -61,6 +63,7 @@ class Pipeline:
         infusion_duration_h: float = 0.0,
         liver_model: str = "well_stirred",
         compound_type_override: str | None = None,
+        dose_projection: DoseProjectionConfig | None = None,
     ) -> None:
         self.compound = compound
         self.route = route
@@ -70,6 +73,7 @@ class Pipeline:
         self.infusion_duration_h = infusion_duration_h
         self.liver_model = liver_model
         self.compound_type_override = compound_type_override
+        self.dose_projection = dose_projection
 
     @classmethod
     def from_smiles(
@@ -109,6 +113,21 @@ class Pipeline:
             liver_model=liver_model,
         )
 
+    def _maybe_project_dose(self, pk: PKParameters) -> "FIHDoseRecommendation | None":
+        """Run FIH dose projection if config is provided and has sufficient inputs."""
+        if self.dose_projection is None:
+            return None
+        dp = self.dose_projection
+        has_hed = dp.noael_mg_kg is not None and dp.noael_species is not None
+        has_mabel = dp.target_kd_nM is not None
+        has_pad = dp.target_ceff_nM is not None
+        if not (has_hed or has_mabel or has_pad):
+            return None
+        from charon.translational.dose_projector import project_fih_dose
+        return project_fih_dose(
+            pk=pk, compound=self.compound, config=self.dose_projection, route=self.route,
+        )
+
     def run(self) -> PipelineResult:
         """Execute the full pipeline and return a :class:`PipelineResult`."""
         if self.route == "oral":
@@ -142,6 +161,8 @@ class Pipeline:
             infusion_duration_h=self.infusion_duration_h,
         )
 
+        dose_rec = self._maybe_project_dose(pk)
+
         return PipelineResult(
             compound=self.compound,
             pk_parameters=pk,
@@ -172,7 +193,9 @@ class Pipeline:
                     }
                     for r in params.kp_overrides
                 ],
+                "mrsd_mg": dose_rec.mrsd_mg if dose_rec else None,
             },
+            dose_recommendation=dose_rec,
         )
 
     def _run_oral(self) -> PipelineResult:
@@ -255,6 +278,8 @@ class Pipeline:
             sim, oral_params, topology, dose_mg=self.dose_mg
         )
 
+        dose_rec = self._maybe_project_dose(pk)
+
         return PipelineResult(
             compound=self.compound,
             pk_parameters=pk,
@@ -280,5 +305,7 @@ class Pipeline:
                 "fg": pk.fg,
                 "fh": pk.fh,
                 "bioavailability": pk.bioavailability,
+                "mrsd_mg": dose_rec.mrsd_mg if dose_rec else None,
             },
+            dose_recommendation=dose_rec,
         )
