@@ -180,7 +180,7 @@ It sits between the GI lumen and the portal blood supply.
 |-----------|-------|--------|
 | V_enterocyte | 0.30 L | Estimated mucosal epithelial volume |
 | Q_villi | 0.18 × Q_gut = 10.53 L/h | Gertz 2011 DMPK 26(5):486 |
-| MPPGI | 6.0 mg/g | Literature range 2–20 (Yang 2007, Barter 2007); calibrated within range against midazolam Fg=0.57 (Thummel 1996) |
+| MPPGI | 15.0 mg/g | Literature range 2–20 (Yang 2007, Barter 2007); calibrated within range against midazolam Fg=0.57 (Thummel 1996). NOTE: CLint_liver_L_h for midazolam in Charon = 348.75 (CLint=93.0, fu_inc=0.96), not 880 as initially estimated. |
 | Gut enterocyte weight | 400 g | Metabolically active mucosal mass |
 | CYP3A4_gut (pmol/mg) | 31 | Paine 1997 Gastroenterology 113(2):453 |
 | CYP3A4_liver (pmol/mg) | 137 | Shimada 1994 |
@@ -281,17 +281,17 @@ fm_cyp3a4: float | None = None
 ### 5.3 Midazolam verification
 
 ```
-CLint_liver_L_h ≈ 880 L/h (Charon ParameterBridge, midazolam HLM)
+CLint_liver_L_h = 348.75 L/h (Charon ParameterBridge: CLint=93.0, fu_inc=0.96, MPPGL=40, liver=1500g)
 fm_CYP3A4 = 1.0
 CYP3A4 ratio = 31/137 = 0.226
-MPPGI × gut_weight = 6.0 × 400 = 2400
+MPPGI × gut_weight = 15.0 × 400 = 6000
 MPPGL × liver_weight = 40 × 1500 = 60000
 
-CLint_gut = 880 × 1.0 × 0.226 × 2400/60000 = 880 × 0.00904 = 7.95 L/h
+CLint_gut = 348.75 × 1.0 × 0.226 × 6000/60000 = 348.75 × 0.0226 = 7.88 L/h
 
 k_baso = 10.53/0.30 = 35.1 /h
-k_metab = 7.95/0.30 = 26.5 /h
-Fg = 35.1/(35.1 + 26.5) = 0.57  ✓ (Thummel 1996: 0.57)
+k_metab = 7.88/0.30 = 26.3 /h
+Fg = 35.1/(35.1 + 26.3) = 0.57  ✓ (Thummel 1996: 0.57)
 ```
 
 ### 5.4 Session 2a restriction
@@ -349,8 +349,9 @@ Fh = Qh / (Qh + fu_b × CLint_liver_L_h)
 ```
 
 **Note**: this will underestimate Fh for compounds with CLint
-overprediction (midazolam: predicted Fh ≈ 0.12 vs literature ~0.72).
-This is a known Sprint 3b Session 1 limitation, not a Session 2a issue.
+overprediction. For midazolam: Charon CLh=13.7 L/h, observed=27.6 L/h,
+so predicted Fh=0.86 vs literature Fh=0.72 (underprediction of CLh
+leads to overprediction of Fh). This is a known Session 1 limitation.
 
 ### 6.4 Bioavailability
 
@@ -404,9 +405,10 @@ gi_tract:
   enterocyte_weight_g: 400
   q_villi_fraction: 0.18              # fraction of Q_gut → villous blood
                                       # Gertz 2011 DMPK 26(5):486
-  mppgi_mg_g: 6.0                     # microsomal protein per g intestine
+  mppgi_mg_g: 15.0                    # microsomal protein per g intestine
                                       # Literature range 2-20 (Yang 2007, Barter 2007)
                                       # Calibrated within range: midazolam Fg=0.57
+                                      # (CLint_liver=348.75 L/h for midazolam in Charon)
 
   # CYP3A4 content for gut-liver IVIVE ratio
   cyp3a4_gut_pmol_per_mg: 31          # Paine 1997 Gastroenterology 113(2):453
@@ -489,7 +491,7 @@ gi_tract:
 
 | Compound | Dose | fm_CYP3A4 | Lit Fg | Lit F | Role | Fg source |
 |----------|------|-----------|--------|-------|------|-----------|
-| midazolam | PO 5 mg | 1.0 | 0.57 | 0.35–0.44 | Calibration (MPPGI=6.0 derived from this) | Thummel 1996 Clin Pharmacol Ther 59(5):491 |
+| midazolam | PO 5 mg | 1.0 | 0.57 | 0.35–0.44 | Calibration (MPPGI=15.0 derived from this) | Thummel 1996 Clin Pharmacol Ther 59(5):491 |
 | felodipine | PO 10 mg | 1.0 | 0.45 | 0.15–0.20 | Independent validation | Edgar 1992 Eur J Clin Pharmacol 42(3):261 |
 | nifedipine | PO 10 mg | 1.0 | 0.78 | 0.45–0.68 | Independent validation | Holtbecker 1996 Clin Pharmacol Ther 60(1):54 |
 
@@ -637,7 +639,8 @@ Priority chain:
 
 ### 13.1 MPPGI calibration
 
-MPPGI = 6.0 mg/g is calibrated against midazolam Fg=0.57. This is
+MPPGI = 15.0 mg/g is calibrated against midazolam Fg=0.57 (given
+CLint_liver_L_h=348.75 from Charon's ParameterBridge). This is
 within the literature range (2–20) but is NOT an independently measured
 physiological constant. Future experimental MPPGI measurements can
 directly replace this value.
