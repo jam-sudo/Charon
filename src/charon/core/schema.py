@@ -319,6 +319,8 @@ class DoseProjectionConfig(BaseModel):
     safety_factor: float = 10.0
     target_kd_nM: float | None = None
     target_ceff_nM: float | None = None
+    tau_h: float = 24.0
+    body_weight_kg: float = 70.0
 
 
 class UncertaintyConfig(BaseModel):
