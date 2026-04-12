@@ -388,3 +388,86 @@ def build_rhs(
         return dy
 
     return rhs
+
+
+# ---------------------------------------------------------------------------
+# Oral PBPK extensions (Sprint 3b Session 2a)
+# ---------------------------------------------------------------------------
+
+from charon.pbpk.acat import GITract, compute_absorption_rates  # noqa: E402
+
+
+@dataclass(frozen=True)
+class OralPBPKParams:
+    """PBPK parameters extended for oral route.
+
+    Contains all fields from CompoundPBPKParams plus gut-specific
+    parameters for the ACAT enterocyte model.
+    """
+
+    # --- inherited from CompoundPBPKParams ---
+    name: str
+    molecular_weight: float
+    logp: float
+    pka_acid: float | None
+    pka_base: float | None
+    compound_type: str
+    fu_p: float
+    bp_ratio: float
+    fu_b: float
+    clint_liver_L_h: float
+    cl_renal_L_h: float
+    kp_by_tissue: dict[str, float]
+    kp_overrides: tuple[KpOverrideRecord, ...] = ()
+
+    # --- oral-specific ---
+    clint_gut_L_h: float = 0.0
+    peff_cm_s: float = 0.0
+    q_villi_L_h: float = 0.0
+    v_enterocyte_L: float = 0.30
+    gi_tract: GITract | None = None
+
+
+def compute_gut_clint(
+    *,
+    clint_liver_L_h: float,
+    fm_cyp3a4: float | None,
+    gi_tract: GITract,
+    mppgl: float,
+    liver_weight_g: float,
+) -> float:
+    """Compute gut-wall intrinsic clearance via ratio approach.
+
+    CLint_gut = CLint_liver × fm_CYP3A4 × (CYP3A4_gut/CYP3A4_liver)
+                × (MPPGI × gut_weight) / (MPPGL × liver_weight)
+
+    The fu_inc correction cancels because both liver and gut use the
+    same microsomal-protein-based scaling (HLM only).
+
+    Parameters
+    ----------
+    clint_liver_L_h : float
+        Whole-liver intrinsic clearance from ParameterBridge (L/h).
+    fm_cyp3a4 : float or None
+        Fraction of hepatic CLint metabolised by CYP3A4.
+        None or 0.0 → returns 0.0 (non-CYP3A4, Fg=1.0).
+    gi_tract : GITract
+        GI physiology with MPPGI and CYP3A4 content.
+    mppgl : float
+        Milligrams protein per gram liver (mg/g).
+    liver_weight_g : float
+        Liver weight (g).
+
+    Returns
+    -------
+    float
+        Gut intrinsic clearance in L/h.
+    """
+    if fm_cyp3a4 is None or fm_cyp3a4 == 0.0:
+        return 0.0
+
+    cyp_ratio = gi_tract.cyp3a4_gut_pmol_per_mg / gi_tract.cyp3a4_liver_pmol_per_mg
+    gut_scaling = gi_tract.mppgi_mg_g * gi_tract.enterocyte_weight_g
+    liver_scaling = mppgl * liver_weight_g
+
+    return clint_liver_L_h * fm_cyp3a4 * cyp_ratio * gut_scaling / liver_scaling
