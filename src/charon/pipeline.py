@@ -112,10 +112,7 @@ class Pipeline:
     def run(self) -> PipelineResult:
         """Execute the full pipeline and return a :class:`PipelineResult`."""
         if self.route == "oral":
-            raise NotImplementedError(
-                "Oral route (ACAT) is deferred to Sprint 3b. "
-                "Use 'iv_bolus' or 'iv_infusion' for now."
-            )
+            return self._run_oral()
 
         topology: PBPKTopology = load_species_topology(self.species)
         bridge = ParameterBridge()
@@ -175,5 +172,113 @@ class Pipeline:
                     }
                     for r in params.kp_overrides
                 ],
+            },
+        )
+
+    def _run_oral(self) -> PipelineResult:
+        """Execute oral route through ACAT + PBPK."""
+        from charon.pbpk.acat import load_gi_tract, papp_to_peff
+        from charon.pbpk.ode_compiler import (
+            OralPBPKParams,
+            compute_gut_clint,
+        )
+        from charon.pbpk.pk_extract import compute_oral_pk_parameters
+        from charon.pbpk.solver import simulate_oral
+
+        topology = load_species_topology(self.species)
+        bridge = ParameterBridge()
+
+        base_params = build_compound_pbpk_params(
+            self.compound,
+            topology,
+            bridge=bridge,
+            compound_type=self.compound_type_override,
+            liver_model=self.liver_model,
+        )
+
+        gi = load_gi_tract(self.species)
+
+        # Resolve Peff
+        perm = self.compound.properties.permeability
+        if perm.peff_cm_s is not None:
+            peff = float(perm.peff_cm_s.value)
+        elif perm.papp_nm_s is not None:
+            peff = papp_to_peff(float(perm.papp_nm_s.value))
+        else:
+            raise ValueError(
+                f"Oral route requires Peff or Papp for compound "
+                f"{self.compound.name!r}, but neither is provided."
+            )
+
+        # Gut CLint
+        fm = self.compound.properties.metabolism.fm_cyp3a4
+        clint_gut = compute_gut_clint(
+            clint_liver_L_h=base_params.clint_liver_L_h,
+            fm_cyp3a4=fm,
+            gi_tract=gi,
+            mppgl=40.0,
+            liver_weight_g=topology.liver_weight_g,
+        )
+
+        q_gut = topology.tissues["gut_wall"].blood_flow_L_h
+        q_villi = gi.q_villi_fraction * q_gut
+
+        oral_params = OralPBPKParams(
+            name=base_params.name,
+            molecular_weight=base_params.molecular_weight,
+            logp=base_params.logp,
+            pka_acid=base_params.pka_acid,
+            pka_base=base_params.pka_base,
+            compound_type=base_params.compound_type,
+            fu_p=base_params.fu_p,
+            bp_ratio=base_params.bp_ratio,
+            fu_b=base_params.fu_b,
+            clint_liver_L_h=base_params.clint_liver_L_h,
+            cl_renal_L_h=base_params.cl_renal_L_h,
+            kp_by_tissue=base_params.kp_by_tissue,
+            kp_overrides=base_params.kp_overrides,
+            clint_gut_L_h=clint_gut,
+            peff_cm_s=peff,
+            q_villi_L_h=q_villi,
+            v_enterocyte_L=gi.enterocyte_volume_L,
+            gi_tract=gi,
+        )
+
+        sim = simulate_oral(
+            topology,
+            oral_params,
+            dose_mg=self.dose_mg,
+            duration_h=self.duration_h,
+        )
+
+        pk = compute_oral_pk_parameters(
+            sim, oral_params, topology, dose_mg=self.dose_mg
+        )
+
+        return PipelineResult(
+            compound=self.compound,
+            pk_parameters=pk,
+            time_h=sim.time_h,
+            cp_plasma=sim.cp_plasma,
+            cp_blood=sim.cp_blood,
+            simulation=sim,
+            metadata={
+                "species": self.species,
+                "route": self.route,
+                "dose_mg": self.dose_mg,
+                "duration_h": self.duration_h,
+                "liver_model": self.liver_model,
+                "compound_type": oral_params.compound_type,
+                "clint_liver_L_h": oral_params.clint_liver_L_h,
+                "clint_gut_L_h": oral_params.clint_gut_L_h,
+                "cl_renal_L_h": oral_params.cl_renal_L_h,
+                "fu_b": oral_params.fu_b,
+                "peff_cm_s": oral_params.peff_cm_s,
+                "solver_method": sim.solver_method,
+                "solver_nfev": sim.solver_nfev,
+                "fa": pk.fa,
+                "fg": pk.fg,
+                "fh": pk.fh,
+                "bioavailability": pk.bioavailability,
             },
         )

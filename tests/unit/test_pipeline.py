@@ -123,7 +123,8 @@ class TestPipelineFromCompound:
         assert result.pk_parameters.cl_apparent is not None
 
     def test_invalid_route(self, theophylline_compound):
-        with pytest.raises(NotImplementedError):
+        """Oral route with no permeability data should raise ValueError."""
+        with pytest.raises((NotImplementedError, ValueError)):
             Pipeline(
                 compound=theophylline_compound,
                 route="oral",
@@ -471,3 +472,45 @@ class TestPipelineMidazolamOverrideMechanism:
         assert cl is not None and cl > 0
         fold_cl = max(cl / OBSERVED_CL, OBSERVED_CL / cl)
         assert fold_cl < 4.0, f"No-override midazolam CL fold={fold_cl:.2f}"
+
+
+class TestPipelineOral:
+    def test_oral_route_runs(self):
+        """Pipeline(route='oral') should no longer raise NotImplementedError."""
+        from charon.pipeline import Pipeline
+        from charon.core.schema import CompoundConfig
+        import yaml
+        from pathlib import Path
+
+        comp_path = Path("validation/data/tier1_obach/compounds/midazolam.yaml")
+        with comp_path.open() as f:
+            raw = yaml.safe_load(f)
+        compound = CompoundConfig(**raw)
+
+        pipe = Pipeline(
+            compound=compound,
+            route="oral",
+            dose_mg=5.0,
+            duration_h=72.0,
+        )
+        result = pipe.run()
+        assert result.pk_parameters.cmax > 0
+        assert result.pk_parameters.fg is not None
+        assert result.pk_parameters.fa is not None
+
+    def test_oral_route_metadata(self):
+        from charon.pipeline import Pipeline
+        from charon.core.schema import CompoundConfig
+        import yaml
+        from pathlib import Path
+
+        comp_path = Path("validation/data/tier1_obach/compounds/midazolam.yaml")
+        with comp_path.open() as f:
+            raw = yaml.safe_load(f)
+        compound = CompoundConfig(**raw)
+
+        pipe = Pipeline(compound=compound, route="oral", dose_mg=5.0)
+        result = pipe.run()
+        assert result.metadata["route"] == "oral"
+        assert "fg" in result.metadata
+        assert "fa" in result.metadata
