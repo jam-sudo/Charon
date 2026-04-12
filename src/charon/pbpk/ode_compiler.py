@@ -471,3 +471,203 @@ def compute_gut_clint(
     liver_scaling = mppgl * liver_weight_g
 
     return clint_liver_L_h * fm_cyp3a4 * cyp_ratio * gut_scaling / liver_scaling
+
+
+def build_oral_rhs(
+    topology: PBPKTopology,
+    params: OralPBPKParams,
+):
+    """Return a closure ``rhs(t, y) -> dy`` for the oral PBPK ODE system.
+
+    Extends the IV PBPK kernel with an 8-segment ACAT lumen transit model
+    and a pooled enterocyte compartment.  The state vector is:
+
+      y[0]             = A_venous      (mg)
+      y[1]             = A_arterial    (mg)
+      y[2 : 2+N]       = A_tissue_i    (mg)   N tissues in topology order
+      y[2+N : 2+N+8]   = A_lumen_i     (mg)   8 GI segments
+      y[2+N+8]         = A_enterocyte  (mg)   pooled enterocyte
+
+    The returned callable is safe for ``scipy.integrate.solve_ivp(method='BDF')``.
+
+    Parameters
+    ----------
+    topology : PBPKTopology
+        Loaded species topology.
+    params : OralPBPKParams
+        Compound parameters including gut-specific fields (clint_gut_L_h,
+        peff_cm_s, q_villi_L_h, v_enterocyte_L, gi_tract).
+
+    Returns
+    -------
+    Callable[[float, np.ndarray], np.ndarray]
+        ``rhs(t, y) -> dy`` function.
+
+    Notes
+    -----
+    Mass conservation: when CLint_liver=0, CLint_gut=0, CL_renal=0, the only
+    mass-leaving channel is fecal excretion (k_transit_colon x A_colon).  At
+    t=0 with drug only in stomach, sum(dy) = 0 exactly.
+    """
+    if params.gi_tract is None:
+        raise ValueError("OralPBPKParams.gi_tract must not be None for oral ODE")
+
+    gi = params.gi_tract
+
+    # ----- Tissue arrays (same as build_rhs) -----
+    tissue_names = topology.tissue_names()
+    n_tissues = len(tissue_names)
+
+    volumes = np.array(
+        [topology.tissues[name].volume_L for name in tissue_names],
+        dtype=np.float64,
+    )
+    flows = np.array(
+        [topology.tissues[name].blood_flow_L_h for name in tissue_names],
+        dtype=np.float64,
+    )
+    kp = np.array(
+        [params.kp_by_tissue[name] for name in tissue_names],
+        dtype=np.float64,
+    )
+
+    drains_to = [topology.tissues[name].drains_to for name in tissue_names]
+
+    lung_idx = tissue_names.index("lung")
+    liver_idx = tissue_names.index("liver")
+    kidney_idx = tissue_names.index("kidney")
+    portal_indices = np.array(
+        [tissue_names.index(p) for p in PORTAL_TISSUES], dtype=np.int64
+    )
+
+    bp = params.bp_ratio
+    fu_b = params.fu_b
+    clint_liver = params.clint_liver_L_h
+    cl_renal = params.cl_renal_L_h
+
+    v_ven = topology.venous_volume_L
+    v_art = topology.arterial_volume_L
+    q_co = topology.cardiac_output_L_h
+    q_ha = topology.hepatic_artery_L_h
+    q_liver_total = flows[liver_idx]
+
+    # ----- GI lumen arrays -----
+    n_seg = len(gi.segments)
+    assert n_seg == 8, f"Expected 8 GI segments, got {n_seg}"
+
+    k_transit = np.array(
+        [seg.transit_rate_1_h for seg in gi.segments],
+        dtype=np.float64,
+    )
+    k_abs = np.array(
+        compute_absorption_rates(gi, params.peff_cm_s),
+        dtype=np.float64,
+    )
+
+    # ----- Enterocyte rate constants -----
+    v_entero = params.v_enterocyte_L
+    clint_gut = params.clint_gut_L_h
+    q_villi = params.q_villi_L_h
+
+    k_baso = q_villi / v_entero          # basolateral transfer rate (1/h)
+    k_metab_gut = clint_gut / v_entero   # gut metabolism rate (1/h)
+
+    # ----- Index offsets -----
+    lumen_start = 2 + n_tissues          # first lumen state index
+    entero_idx = lumen_start + n_seg     # enterocyte state index
+    n_total = entero_idx + 1             # total states
+
+    def rhs(t: float, y: np.ndarray) -> np.ndarray:
+        dy = np.zeros(n_total)
+
+        a_ven = y[0]
+        a_art = y[1]
+        a_tissues = y[2 : 2 + n_tissues]
+        a_lumen = y[lumen_start : lumen_start + n_seg]
+        a_entero = y[entero_idx]
+
+        c_ven = a_ven / v_ven
+        c_art = a_art / v_art
+
+        c_tissue = a_tissues / volumes
+        c_blood_out = c_tissue * bp / kp
+
+        # --- Tissue dynamics (identical to build_rhs) ---
+        dy_tissues = np.zeros(n_tissues)
+        for i in range(n_tissues):
+            if i == lung_idx or i == liver_idx:
+                continue
+            dy_tissues[i] = flows[i] * (c_art - c_blood_out[i])
+
+        # Lung: receives full CO from venous pool
+        dy_tissues[lung_idx] = q_co * (c_ven - c_blood_out[lung_idx])
+
+        # Kidney: renal clearance
+        dy_tissues[kidney_idx] -= cl_renal * c_blood_out[kidney_idx] / bp
+
+        # Liver: hepatic artery + portal inflow + enterocyte basolateral
+        portal_inflow = 0.0
+        for pi in portal_indices:
+            portal_inflow += flows[pi] * c_blood_out[pi]
+        hepatic_elim = clint_liver * fu_b * c_blood_out[liver_idx]
+
+        portal_from_entero = k_baso * a_entero  # mg/h from enterocyte
+
+        dy_tissues[liver_idx] = (
+            q_ha * c_art
+            + portal_inflow
+            + portal_from_entero
+            - q_liver_total * c_blood_out[liver_idx]
+            - hepatic_elim
+        )
+
+        # Venous pool: inflow from all venous-draining tissues (same as IV)
+        venous_inflow = 0.0
+        for i in range(n_tissues):
+            if i == lung_idx:
+                continue
+            if drains_to[i] == "venous":
+                if i == liver_idx:
+                    venous_inflow += q_liver_total * c_blood_out[liver_idx]
+                else:
+                    venous_inflow += flows[i] * c_blood_out[i]
+        dy_ven = venous_inflow - q_co * c_ven
+
+        # Arterial pool
+        dy_art = q_co * c_blood_out[lung_idx] - q_co * c_art
+
+        # --- GI lumen transit ---
+        dy_lumen = np.zeros(n_seg)
+
+        # Stomach (segment 0): emptying only, no absorption (ka_fraction=0)
+        dy_lumen[0] = -k_transit[0] * a_lumen[0]
+
+        # Segments 1-7: inflow from previous, outflow via transit + absorption
+        for i in range(1, n_seg):
+            dy_lumen[i] = (
+                k_transit[i - 1] * a_lumen[i - 1]
+                - k_transit[i] * a_lumen[i]
+                - k_abs[i] * a_lumen[i]
+            )
+
+        # --- Enterocyte ---
+        total_absorption = 0.0
+        for i in range(n_seg):
+            total_absorption += k_abs[i] * a_lumen[i]
+
+        dy_entero = (
+            total_absorption
+            - k_metab_gut * a_entero
+            - k_baso * a_entero
+        )
+
+        # --- Assemble ---
+        dy[0] = dy_ven
+        dy[1] = dy_art
+        dy[2 : 2 + n_tissues] = dy_tissues
+        dy[lumen_start : lumen_start + n_seg] = dy_lumen
+        dy[entero_idx] = dy_entero
+
+        return dy
+
+    return rhs
