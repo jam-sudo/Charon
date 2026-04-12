@@ -26,6 +26,13 @@ Public API:
 
 from __future__ import annotations
 
+from charon.pbpk.acat import (
+    GISegment,
+    GITract,
+    compute_absorption_rates,
+    load_gi_tract,
+    papp_to_peff,
+)
 from charon.pbpk.kp_calculator import (
     TissueComposition,
     apply_berezhkovskiy_correction,
@@ -35,12 +42,15 @@ from charon.pbpk.kp_calculator import (
 )
 from charon.pbpk.ode_compiler import (
     CompoundPBPKParams,
+    OralPBPKParams,
     build_compound_pbpk_params,
+    build_oral_rhs,
     build_rhs,
+    compute_gut_clint,
     infer_compound_type,
 )
-from charon.pbpk.pk_extract import compute_pk_parameters
-from charon.pbpk.solver import SimulationResult, simulate_iv
+from charon.pbpk.pk_extract import compute_oral_pk_parameters, compute_pk_parameters
+from charon.pbpk.solver import OralSimulationResult, SimulationResult, simulate_iv, simulate_oral
 from charon.pbpk.topology import (
     PORTAL_TISSUES,
     PBPKTopology,
@@ -50,6 +60,10 @@ from charon.pbpk.topology import (
 
 __all__ = [
     "CompoundPBPKParams",
+    "GISegment",
+    "GITract",
+    "OralPBPKParams",
+    "OralSimulationResult",
     "PBPKTopology",
     "PORTAL_TISSUES",
     "SimulationResult",
@@ -57,12 +71,19 @@ __all__ = [
     "TissueNode",
     "apply_berezhkovskiy_correction",
     "build_compound_pbpk_params",
+    "build_oral_rhs",
     "build_rhs",
+    "compute_absorption_rates",
     "compute_all_kp",
+    "compute_gut_clint",
     "compute_kp_poulin_theil",
     "compute_kp_rodgers_rowland",
+    "compute_oral_pk_parameters",
     "compute_pk_parameters",
     "infer_compound_type",
+    "load_gi_tract",
     "load_species_topology",
+    "papp_to_peff",
     "simulate_iv",
+    "simulate_oral",
 ]
