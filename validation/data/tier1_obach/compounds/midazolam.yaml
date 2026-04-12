@@ -21,8 +21,14 @@ properties:
     fu_p: {value: 0.03, source: experimental, unit: fraction, method: "Obach 1999 Table 2"}
     fu_inc: {value: 0.96, source: experimental, unit: fraction, method: "Obach 1999 Table 2"}
     bp_ratio: {value: 0.66, source: experimental, unit: ratio, method: "Obach 1999 Table 2"}
+  permeability:
+    peff_cm_s:
+      value: 4.0e-4
+      source: literature
+      method: "Lennernas 2007 Eur J Pharm Sci 29(3-4):278"
   metabolism:
     clint_uL_min_mg: {value: 93.0, source: experimental, unit: uL/min/mg, method: "Obach 1999 Table 2"}
+    fm_cyp3a4: 1.0
   renal:
     clrenal_L_h: {value: 0.0, source: experimental, unit: L/h, method: "Obach 1999 Table 2"}
   distribution:
