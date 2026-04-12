@@ -130,3 +130,55 @@ species:
     CYP2C9: CYP2C9
     CYP1A2: CYP1A2
     CYP2E1: CYP2E1
+
+  # GI tract parameters for ACAT oral absorption model (Sprint 3b Session 2a).
+  # Per-segment values ported from Sisyphus reference_man.yaml (Yu & Amidon 1999).
+  gi_tract:
+    enterocyte_volume_L: 0.30
+    enterocyte_weight_g: 400
+    q_villi_fraction: 0.18            # Gertz 2011 DMPK 26(5):486
+    mppgi_mg_g: 15.0                  # Literature range 2-20 (Yang 2007, Barter 2007)
+                                      # Calibrated within range: midazolam Fg=0.57
+    cyp3a4_gut_pmol_per_mg: 31        # Paine 1997 Gastroenterology 113(2):453
+    cyp3a4_liver_pmol_per_mg: 137     # Shimada 1994
+    segments:
+      stomach:
+        volume_L: 0.25
+        radius_cm: 5.0
+        ka_fraction: 0.0
+        transit_rate_1_h: 4.0
+      duodenum:
+        volume_L: 0.05
+        radius_cm: 1.6
+        ka_fraction: 1.0
+        transit_rate_1_h: 3.846
+      jejunum1:
+        volume_L: 0.07
+        radius_cm: 1.5
+        ka_fraction: 1.0
+        transit_rate_1_h: 2.105
+      jejunum2:
+        volume_L: 0.07
+        radius_cm: 1.5
+        ka_fraction: 1.0
+        transit_rate_1_h: 2.105
+      ileum1:
+        volume_L: 0.06
+        radius_cm: 1.3
+        ka_fraction: 0.8
+        transit_rate_1_h: 1.471
+      ileum2:
+        volume_L: 0.06
+        radius_cm: 1.3
+        ka_fraction: 0.6
+        transit_rate_1_h: 1.471
+      ileum3:
+        volume_L: 0.06
+        radius_cm: 1.3
+        ka_fraction: 0.3
+        transit_rate_1_h: 1.471
+      colon:
+        volume_L: 0.30
+        radius_cm: 2.5
+        ka_fraction: 0.05
+        transit_rate_1_h: 0.074
