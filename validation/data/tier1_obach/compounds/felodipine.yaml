@@ -1,0 +1,31 @@
+name: felodipine
+smiles: "CCOC(=O)C1=C(C)NC(C)=C(C(=O)OC)C1c1cccc(Cl)c1Cl"
+molecular_weight: 384.26
+source: experimental
+properties:
+  physicochemical:
+    logp:
+      value: 3.39
+      source: experimental
+      method: "Wishart DS, DrugBank DB01023"
+    compound_type: neutral
+  binding:
+    fu_p: {value: 0.004, source: experimental, unit: fraction, method: "Edgar 1992 Eur J Clin Pharmacol 42(3):261"}
+    fu_inc: {value: 0.60, source: correlation, unit: fraction, method: "Hallifax-Houston correlation from logP"}
+    bp_ratio: {value: 0.73, source: experimental, unit: ratio, method: "Estimated from hematocrit and Kp_blood"}
+  metabolism:
+    clint_uL_min_mg: {value: 60.0, source: experimental, unit: uL/min/mg, method: "Obach 1999 Drug Metab Dispos 27(11):1350"}
+    fm_cyp3a4: 1.0
+  permeability:
+    peff_cm_s:
+      value: 3.5e-4
+      source: literature
+      method: "Estimated from Caco-2 Papp ~250 nm/s; Sun 2002 correlation"
+  renal:
+    clrenal_L_h: {value: 0.0, source: experimental, unit: L/h, method: "Negligible renal elimination"}
+observed_oral:
+  dose_mg: 10.0
+  route: oral
+  bioavailability: 0.15
+  fg: 0.45
+  fg_source: "Edgar 1992 Eur J Clin Pharmacol 42(3):261"

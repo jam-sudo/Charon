@@ -1,0 +1,31 @@
+name: nifedipine
+smiles: "COC(=O)C1=C(C)NC(C)=C(C(=O)OC)C1c1ccccc1[N+](=O)[O-]"
+molecular_weight: 346.34
+source: experimental
+properties:
+  physicochemical:
+    logp:
+      value: 2.20
+      source: experimental
+      method: "Wishart DS, DrugBank DB01115"
+    compound_type: neutral
+  binding:
+    fu_p: {value: 0.04, source: experimental, unit: fraction, method: "Holtbecker 1996 Clin Pharmacol Ther 60(1):54"}
+    fu_inc: {value: 0.75, source: correlation, unit: fraction, method: "Hallifax-Houston correlation from logP"}
+    bp_ratio: {value: 0.73, source: experimental, unit: ratio, method: "Estimated from hematocrit and Kp_blood"}
+  metabolism:
+    clint_uL_min_mg: {value: 35.0, source: experimental, unit: uL/min/mg, method: "Obach 1999 Drug Metab Dispos 27(11):1350"}
+    fm_cyp3a4: 1.0
+  permeability:
+    peff_cm_s:
+      value: 3.0e-4
+      source: literature
+      method: "Lennernas 2007 Eur J Pharm Sci 29(3-4):278"
+  renal:
+    clrenal_L_h: {value: 0.0, source: experimental, unit: L/h, method: "Negligible renal elimination"}
+observed_oral:
+  dose_mg: 10.0
+  route: oral
+  bioavailability: 0.50
+  fg: 0.78
+  fg_source: "Holtbecker 1996 Clin Pharmacol Ther 60(1):54"
