@@ -202,6 +202,14 @@ class MetabolismProperties(BaseModel):
     primary_cyp: str | None = None
     secondary_cyp: str | None = None
     clint_uL_min_mg: PredictedProperty | None = None
+    fm_cyp3a4: float | None = None
+
+    @field_validator("fm_cyp3a4")
+    @classmethod
+    def _fm_cyp3a4_range(cls, v: float | None) -> float | None:
+        if v is not None and (v < 0.0 or v > 1.0):
+            raise ValueError(f"fm_cyp3a4 must be in [0.0, 1.0], got {v}")
+        return v
 
 
 class SafetyProperties(BaseModel):

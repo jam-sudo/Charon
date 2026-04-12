@@ -378,3 +378,42 @@ class TestValidationResult:
                 message="test",
                 severity="INVALID",
             )
+
+
+# ---------------------------------------------------------------------------
+# MetabolismProperties.fm_cyp3a4
+# ---------------------------------------------------------------------------
+
+
+class TestFmCyp3a4:
+    def test_fm_cyp3a4_default_none(self):
+        from charon.core.schema import MetabolismProperties
+        m = MetabolismProperties()
+        assert m.fm_cyp3a4 is None
+
+    def test_fm_cyp3a4_valid(self):
+        from charon.core.schema import MetabolismProperties
+        m = MetabolismProperties(fm_cyp3a4=0.75)
+        assert m.fm_cyp3a4 == 0.75
+
+    def test_fm_cyp3a4_zero(self):
+        from charon.core.schema import MetabolismProperties
+        m = MetabolismProperties(fm_cyp3a4=0.0)
+        assert m.fm_cyp3a4 == 0.0
+
+    def test_fm_cyp3a4_one(self):
+        from charon.core.schema import MetabolismProperties
+        m = MetabolismProperties(fm_cyp3a4=1.0)
+        assert m.fm_cyp3a4 == 1.0
+
+    def test_fm_cyp3a4_negative_rejected(self):
+        from charon.core.schema import MetabolismProperties
+        import pytest
+        with pytest.raises(Exception):
+            MetabolismProperties(fm_cyp3a4=-0.1)
+
+    def test_fm_cyp3a4_above_one_rejected(self):
+        from charon.core.schema import MetabolismProperties
+        import pytest
+        with pytest.raises(Exception):
+            MetabolismProperties(fm_cyp3a4=1.01)
