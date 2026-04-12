@@ -8,6 +8,7 @@ from typing import Literal
 import numpy as np
 
 from charon.core.schema import PKParameters
+from charon.pbpk.acat import compute_absorption_rates
 
 
 def _trapezoid(x: np.ndarray, y: np.ndarray) -> float:
@@ -120,4 +121,107 @@ def compute_pk_parameters(
         fa=1.0,
         fg=1.0,
         fh=None,
+    )
+
+
+def compute_oral_pk_parameters(
+    sim,  # OralSimulationResult (not typed to avoid circular import)
+    params,  # OralPBPKParams
+    topology,  # PBPKTopology
+    *,
+    dose_mg: float,
+) -> PKParameters:
+    """Extract PK parameters and Fa/Fg/Fh from an oral simulation.
+
+    Fa and Fg are computed via post-hoc trapezoidal integration of
+    ODE fluxes, independent of hepatic CLint.
+
+    Parameters
+    ----------
+    sim : OralSimulationResult
+        Completed oral simulation.
+    params : OralPBPKParams
+        Oral compound parameters.
+    topology : PBPKTopology
+        Species topology (for Qh, used in Fh calculation).
+    dose_mg : float
+        Administered oral dose (mg).
+
+    Returns
+    -------
+    PKParameters
+        Standard PK parameters with Fa, Fg, Fh, and bioavailability.
+
+    Notes
+    -----
+    Units:
+    - dose_mg: mg
+    - Cp: mg/L
+    - AUC: mg*h/L
+    - CL/F: L/h
+    - Fa, Fg, Fh: dimensionless fractions (0-1)
+
+    Fg is derived from the ratio of portal venous flux to total absorption
+    flux, computed via trapezoidal integration of the ODE state trajectories.
+    This makes Fg independent of hepatic CLint error (post-hoc decomposition).
+
+    Fh uses the analytical well-stirred formula: Fh = Qh / (Qh + fu_b * CLint_liver).
+    """
+    t = np.asarray(sim.time_h, dtype=np.float64)
+    cp = np.asarray(sim.cp_plasma, dtype=np.float64)
+
+    # --- Standard PK ---
+    cmax = float(np.max(cp))
+    tmax = float(t[int(np.argmax(cp))])
+
+    auc_0_last = _trapezoid(t, cp)
+
+    mask_24 = t <= 24.0
+    auc_0_24 = _trapezoid(t[mask_24], cp[mask_24]) if mask_24.sum() >= 2 else None
+
+    ke, cp_last = _terminal_log_slope(t, cp)
+    auc_tail = cp_last / ke
+    auc_0_inf = auc_0_last + auc_tail
+
+    half_life = math.log(2) / ke
+    cl_apparent = dose_mg / auc_0_inf  # CL/F for oral
+
+    # --- Fa: fraction absorbed (trapezoidal integration of absorption flux) ---
+    gi = params.gi_tract
+    k_abs_arr = np.array(
+        compute_absorption_rates(gi, params.peff_cm_s),
+        dtype=np.float64,
+    )
+    # Absorption flux at each time point: sum(k_abs_i * A_lumen_i(t))
+    absorption_flux = np.zeros_like(t)
+    for i in range(len(gi.segments)):
+        absorption_flux += k_abs_arr[i] * sim.lumen_trajectory[i, :]
+    absorbed_total = _trapezoid(t, absorption_flux)
+    fa = absorbed_total / dose_mg
+
+    # --- Fg: fraction escaping gut metabolism (independent of CLint_liver) ---
+    k_baso = params.q_villi_L_h / params.v_enterocyte_L
+    portal_flux = k_baso * sim.enterocyte_trajectory
+    portal_total = _trapezoid(t, portal_flux)
+    fg = portal_total / absorbed_total if absorbed_total > 0 else 1.0
+
+    # --- Fh: fraction escaping hepatic first-pass (analytical well-stirred) ---
+    qh = topology.tissues["liver"].blood_flow_L_h
+    fh = qh / (qh + params.fu_b * params.clint_liver_L_h)
+
+    # --- Bioavailability ---
+    bioavailability = fa * fg * fh
+
+    return PKParameters(
+        cmax=cmax,
+        tmax=tmax,
+        auc_0_inf=float(auc_0_inf),
+        auc_0_24=float(auc_0_24) if auc_0_24 is not None else None,
+        half_life=float(half_life),
+        cl_apparent=float(cl_apparent),
+        vss=None,  # not meaningful for oral
+        bioavailability=float(bioavailability),
+        fa=float(fa),
+        fg=float(fg),
+        fh=float(fh),
     )
