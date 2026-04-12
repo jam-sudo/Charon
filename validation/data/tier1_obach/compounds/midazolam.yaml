@@ -43,3 +43,11 @@ properties:
         source: literature
         unit: ratio
         method: "Björkman S, J Pharm Sci 1996;85(8):887-889 — rat experimental Kp_adipose"
+observed_oral:
+  dose_mg: 5.0
+  route: oral
+  bioavailability: 0.44
+  fg: 0.57
+  fg_source: "Thummel 1996 Clin Pharmacol Ther 59(5):491"
+  cmax_ng_mL: 41.0
+  tmax_h: 0.5
