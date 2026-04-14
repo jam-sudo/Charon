@@ -28,6 +28,7 @@ from charon.core.schema import (
     CompoundProperties,
     DoseProjectionConfig,
     PKParameters,
+    UncertaintyConfig,
 )
 from charon.pbpk.ode_compiler import build_compound_pbpk_params
 from charon.pbpk.pk_extract import compute_pk_parameters
@@ -47,6 +48,7 @@ class PipelineResult:
     simulation: SimulationResult
     metadata: dict = field(default_factory=dict)
     dose_recommendation: "FIHDoseRecommendation | None" = None
+    uncertainty: "UncertaintyResult | None" = None
 
 
 class Pipeline:
@@ -64,6 +66,7 @@ class Pipeline:
         liver_model: str = "well_stirred",
         compound_type_override: str | None = None,
         dose_projection: DoseProjectionConfig | None = None,
+        uncertainty: UncertaintyConfig | None = None,
     ) -> None:
         self.compound = compound
         self.route = route
@@ -74,6 +77,7 @@ class Pipeline:
         self.liver_model = liver_model
         self.compound_type_override = compound_type_override
         self.dose_projection = dose_projection
+        self.uncertainty = uncertainty
 
     @classmethod
     def from_smiles(
@@ -111,6 +115,43 @@ class Pipeline:
             duration_h=duration_h,
             infusion_duration_h=infusion_duration_h,
             liver_model=liver_model,
+        )
+
+    def _run_uncertainty(self):
+        """Run uncertainty propagation if configured."""
+        if self.uncertainty is None:
+            return None
+        if self.dose_projection is None:
+            raise ValueError(
+                "uncertainty requires dose_projection to be set "
+                "(need dose projection to quantify dose CI)"
+            )
+        from charon.uncertainty.sampling import build_param_specs, generate_lhs_samples
+        from charon.uncertainty.propagation import propagate
+        from charon.uncertainty.dose_range import compute_dose_range
+
+        param_specs = build_param_specs(self.compound)
+        sampling_result = generate_lhs_samples(
+            param_specs=param_specs,
+            n_samples=self.uncertainty.n_samples,
+            correlation=self.uncertainty.correlation,
+        )
+        prop_result = propagate(
+            base_compound=self.compound,
+            samples=sampling_result.samples,
+            route=self.route,
+            dose_mg=self.dose_mg,
+            dose_projection=self.dose_projection,
+            duration_h=self.duration_h,
+            liver_model=self.liver_model,
+        )
+        if prop_result.n_successful < 5:
+            return None
+        return compute_dose_range(
+            prop_result.doses_mg,
+            sensitivity={},
+            param_names=prop_result.param_names,
+            parameter_matrix=prop_result.parameter_matrix,
         )
 
     def _maybe_project_dose(self, pk: PKParameters) -> "FIHDoseRecommendation | None":
@@ -162,6 +203,7 @@ class Pipeline:
         )
 
         dose_rec = self._maybe_project_dose(pk)
+        unc = self._run_uncertainty()
 
         return PipelineResult(
             compound=self.compound,
@@ -194,8 +236,10 @@ class Pipeline:
                     for r in params.kp_overrides
                 ],
                 "mrsd_mg": dose_rec.mrsd_mg if dose_rec else None,
+                "uncertainty_ci_90": f"{unc.ci_90_lower_mg:.1f}-{unc.ci_90_upper_mg:.1f}" if unc else None,
             },
             dose_recommendation=dose_rec,
+            uncertainty=unc,
         )
 
     def _run_oral(self) -> PipelineResult:
@@ -279,6 +323,7 @@ class Pipeline:
         )
 
         dose_rec = self._maybe_project_dose(pk)
+        unc = self._run_uncertainty()
 
         return PipelineResult(
             compound=self.compound,
@@ -306,6 +351,8 @@ class Pipeline:
                 "fh": pk.fh,
                 "bioavailability": pk.bioavailability,
                 "mrsd_mg": dose_rec.mrsd_mg if dose_rec else None,
+                "uncertainty_ci_90": f"{unc.ci_90_lower_mg:.1f}-{unc.ci_90_upper_mg:.1f}" if unc else None,
             },
             dose_recommendation=dose_rec,
+            uncertainty=unc,
         )
