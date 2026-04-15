@@ -7,13 +7,15 @@ runtime dependencies.
 
 from __future__ import annotations
 
+import math
+
 from charon.report.collector import ReportData
 
 
 def format_value(v: float | int | None, *, digits: int = 4) -> str:
     """Format a numeric value for a Markdown table cell.
 
-    - ``None`` → ``"-"``
+    - ``None``, ``NaN``, ``±inf`` → ``"-"``
     - ``abs(v) >= 1000`` or ``abs(v) < 0.01`` (and not zero) → scientific
       with ``digits-1`` significant figures.
     - otherwise → fixed-ish with ``digits`` significant figures.
@@ -24,6 +26,8 @@ def format_value(v: float | int | None, *, digits: int = 4) -> str:
         fv = float(v)
     except (TypeError, ValueError):
         return str(v)
+    if not math.isfinite(fv):
+        return "-"
     if fv == 0.0:
         return "0"
     a = abs(fv)
@@ -86,4 +90,83 @@ def _render_compound_profile(data: ReportData) -> str:
     )
     lines.append(f"- **Compound type:** {data.compound_type or '-'}")
     lines.append(f"- **Source:** {data.source}")
+    return "\n".join(lines)
+
+
+_ADME_ROW_ORDER: tuple[str, ...] = (
+    "logp",
+    "pka_acid",
+    "pka_base",
+    "solubility_ug_ml",
+    "fu_p",
+    "fu_inc",
+    "bp_ratio",
+    "clint_uL_min_mg",
+    "papp_nm_s",
+    "peff_cm_s",
+    "herg_ic50_uM",
+    "clrenal_L_h",
+)
+
+
+def _ci_cell(entry: dict) -> str:
+    lo = entry.get("ci_lower")
+    hi = entry.get("ci_upper")
+    if lo is None or hi is None:
+        return "-"
+    return f"[{format_value(lo)}, {format_value(hi)}]"
+
+
+def _render_adme_table(data: ReportData) -> str:
+    lines = ["## 3. ADME Predictions", ""]
+    if not data.properties:
+        lines.append("*No ADME properties recorded.*")
+        return "\n".join(lines)
+
+    lines.append("| Property | Value | 90% CI | Unit | Source | Flag |")
+    lines.append("| --- | --- | --- | --- | --- | --- |")
+    for key in _ADME_ROW_ORDER:
+        entry = data.properties.get(key)
+        if entry is None:
+            continue
+        lines.append(
+            "| {name} | {val} | {ci} | {unit} | {src} | {flag} |".format(
+                name=key,
+                val=format_value(entry.get("value")),
+                ci=_ci_cell(entry),
+                unit=entry.get("unit") or "-",
+                src=entry.get("source") or "-",
+                flag=entry.get("flag") or "-",
+            )
+        )
+    return "\n".join(lines)
+
+
+def _render_ivive_audit(data: ReportData) -> str:
+    lines = ["## 4. IVIVE & Hepatic Clearance", ""]
+    ivive = data.ivive_summary or {}
+    if not ivive:
+        lines.append("*IVIVE summary not available in run metadata.*")
+        return "\n".join(lines)
+
+    model = ivive.get("liver_model", "-")
+    clint_liver = ivive.get("clint_liver_L_h")
+    cl_renal = ivive.get("cl_renal_L_h")
+    fu_b = ivive.get("fu_b")
+    cl_app = data.pk_params.get("cl_apparent")
+
+    lines.append(
+        f"CLint was scaled via the **{model}** model. Whole-liver "
+        f"CLint = {format_value(clint_liver)} L/h. "
+        f"fu_b = {format_value(fu_b)}. "
+        f"Renal CL = {format_value(cl_renal)} L/h. "
+        f"In-vivo apparent CL from simulation = "
+        f"{format_value(cl_app)} L/h."
+    )
+    lines.append("")
+    lines.append(f"- **Liver model:** {model}")
+    lines.append(f"- **CLint (whole liver):** {format_value(clint_liver)} L/h")
+    lines.append(f"- **fu_b:** {format_value(fu_b)}")
+    lines.append(f"- **Renal CL:** {format_value(cl_renal)} L/h")
+    lines.append(f"- **In-vivo apparent CL:** {format_value(cl_app)} L/h")
     return "\n".join(lines)

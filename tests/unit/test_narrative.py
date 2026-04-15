@@ -137,3 +137,99 @@ def test_render_compound_profile_lists_identity():
     assert "325.77" in out
     assert "base" in out
     assert "experimental" in out
+
+
+import math
+
+from charon.report.narrative import _render_adme_table, _render_ivive_audit
+
+
+def test_format_value_nan_returns_dash():
+    assert format_value(float("nan")) == "-"
+
+
+def test_format_value_inf_returns_dash():
+    assert format_value(float("inf")) == "-"
+    assert format_value(float("-inf")) == "-"
+
+
+def test_render_adme_table_header():
+    data = _make_data(
+        properties={
+            "logp": {
+                "value": 3.89,
+                "ci_lower": 3.4,
+                "ci_upper": 4.3,
+                "unit": "log",
+                "source": "ml_ensemble",
+                "flag": None,
+                "method": None,
+            },
+        }
+    )
+    out = _render_adme_table(data)
+    assert "## 3. ADME Predictions" in out
+    assert "| Property" in out
+    assert "| --- " in out or "|---" in out
+    assert "logp" in out
+    assert "3.89" in out
+
+
+def test_render_adme_table_skips_missing():
+    data = _make_data(properties={})
+    out = _render_adme_table(data)
+    # Header still emitted
+    assert "## 3. ADME Predictions" in out
+    # But no rows
+    assert "logp" not in out
+    assert "fu_p" not in out
+
+
+def test_render_adme_table_ci_dash_when_missing():
+    data = _make_data(
+        properties={
+            "fu_p": {
+                "value": 0.032,
+                "ci_lower": None,
+                "ci_upper": None,
+                "unit": "fraction",
+                "source": "experimental",
+                "flag": None,
+                "method": None,
+            }
+        }
+    )
+    out = _render_adme_table(data)
+    # The row should have a dash in the CI column
+    row_lines = [ln for ln in out.split("\n") if ln.startswith("| fu_p")]
+    assert len(row_lines) == 1
+    # CI column is the third pipe-separated field
+    cells = [c.strip() for c in row_lines[0].split("|")[1:-1]]
+    assert cells[2] == "-"
+
+
+def test_render_ivive_audit_narrative():
+    data = _make_data(
+        ivive_summary={
+            "clint_liver_L_h": 348.75,
+            "cl_renal_L_h": 0.23,
+            "fu_b": 0.071,
+            "liver_model": "well_stirred",
+            "compound_type": "base",
+        },
+        pk_params={"cl_apparent": 24.1},
+    )
+    out = _render_ivive_audit(data)
+    assert "## 4. IVIVE" in out
+    assert "well_stirred" in out
+    assert "348.75" in out or "348.8" in out or "3.49e+02" in out
+    assert "0.071" in out or "7.1e-02" in out
+    assert "24.1" in out  # cl_apparent
+
+
+def test_render_ivive_audit_handles_missing_metadata():
+    data = _make_data(ivive_summary={}, pk_params={})
+    out = _render_ivive_audit(data)
+    assert "## 4. IVIVE" in out
+    # Should not crash; contains placeholder
+    assert "-" in out or "not available" in out.lower()
