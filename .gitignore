@@ -1,18 +1,100 @@
+# ---------------------------------------------------------------------------
+# Byte-compiled / optimized Python
+# ---------------------------------------------------------------------------
 __pycache__/
-*.pyc
-*.pyo
-*.egg-info/
-dist/
+*.py[cod]
+*$py.class
+*.so
+
+# ---------------------------------------------------------------------------
+# Distribution / packaging
+# ---------------------------------------------------------------------------
 build/
-.eggs/
+dist/
 *.egg
+*.egg-info/
+.eggs/
+wheels/
+pip-wheel-metadata/
+MANIFEST
+
+# ---------------------------------------------------------------------------
+# Virtual environments
+# ---------------------------------------------------------------------------
+.env
 .venv/
 venv/
-.env
+env/
+ENV/
+
+# ---------------------------------------------------------------------------
+# Testing / coverage / type checkers
+# ---------------------------------------------------------------------------
 .pytest_cache/
 .coverage
+.coverage.*
+coverage.xml
 htmlcov/
+.tox/
+.nox/
 .mypy_cache/
+.pyre/
+.pytype/
 .ruff_cache/
-*.so
-*.ipynb_checkpoints/
+.dmypy.json
+
+# ---------------------------------------------------------------------------
+# Jupyter / notebooks
+# ---------------------------------------------------------------------------
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ---------------------------------------------------------------------------
+# IDE / editor
+# ---------------------------------------------------------------------------
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.spyderproject
+.spyproject
+
+# ---------------------------------------------------------------------------
+# OS-generated
+# ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------------------------------------------------------------------------
+# Claude Code / agent tooling
+# ---------------------------------------------------------------------------
+.claude/
+
+# ---------------------------------------------------------------------------
+# Charon-specific: generated artifacts
+# ---------------------------------------------------------------------------
+# Local report outputs (CLI `charon report --output ...`)
+/reports/
+/output/
+*.report.md
+*.report.json
+
+# Ad-hoc analysis scratch
+scratch/
+tmp/
+.tmp/
+
+# Training artifacts (large intermediate files; final models in models/ are tracked)
+*.pkl
+*.joblib
+*.parquet
+wandb/
+mlruns/
+
+# Logs
+*.log
+logs/
