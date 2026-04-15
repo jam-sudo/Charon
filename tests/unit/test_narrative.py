@@ -527,3 +527,62 @@ def test_render_report_no_raw_none():
     data = _make_data()
     out = render_report(data)
     assert "| None |" not in out
+
+
+def test_render_appendix_handles_none_metadata_value():
+    data = _make_data(metadata={"species": "human", "seed": None})
+    out = _render_appendix(data)
+    # Should not contain raw "None" in the yaml block
+    yaml_block_lines = [
+        ln for ln in out.split("\n")
+        if not ln.startswith("#")
+        and not ln.startswith("- ")
+        and not ln.startswith("```")
+        and ln.strip()
+    ]
+    joined = "\n".join(yaml_block_lines)
+    assert "None" not in joined  # yaml null, not Python None
+    # species should still appear
+    assert "species" in out
+
+
+def test_render_appendix_handles_numpy_scalar():
+    import numpy as np
+    data = _make_data(metadata={"solver_nfev": np.int64(42), "residual": np.float64(1e-8)})
+    out = _render_appendix(data)
+    assert "42" in out
+    # yaml should parse the block
+    import yaml
+    yaml_start = out.index("```yaml") + len("```yaml\n")
+    yaml_end = out.rindex("```")
+    yaml_text = out[yaml_start:yaml_end]
+    parsed = yaml.safe_load(yaml_text)
+    assert parsed["solver_nfev"] == 42
+
+
+def test_render_ivive_audit_handles_none_liver_model():
+    data = _make_data(
+        ivive_summary={"liver_model": None, "fu_b": None, "clint_liver_L_h": None},
+        pk_params={"cl_apparent": None},
+    )
+    out = _render_ivive_audit(data)
+    assert "None" not in out
+
+
+def test_render_dose_projection_bolds_limiting_case_insensitive():
+    data = _make_data(
+        dose_recommendation={
+            "mrsd_mg": 56.45,
+            "limiting_method": "HED",  # uppercase
+            "route": "oral",
+            "safety_factor": 10.0,
+            "salt_factor": 1.0,
+            "rationale": "HED",
+            "hed": {"mrsd_mg": 56.45},
+            "mabel": None,
+            "pad": None,
+        }
+    )
+    out = _render_dose_projection(data)
+    # HED row MRSD should be bolded even though upstream gave "HED" not "hed"
+    assert "**56.45**" in out or "**56.5**" in out

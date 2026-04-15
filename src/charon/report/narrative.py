@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import math
 
+import yaml
+
 from charon.report.collector import ReportData
 
 
@@ -166,7 +168,7 @@ def _render_ivive_audit(data: ReportData) -> str:
         lines.append("*IVIVE summary not available in run metadata.*")
         return "\n".join(lines)
 
-    model = ivive.get("liver_model", "-")
+    model = ivive.get("liver_model") or "-"
     clint_liver = ivive.get("clint_liver_L_h")
     cl_renal = ivive.get("cl_renal_L_h")
     fu_b = ivive.get("fu_b")
@@ -272,7 +274,7 @@ def _render_dose_projection(data: ReportData) -> str:
         )
         return "\n".join(lines)
 
-    limiting = str(rec.get("limiting_method", ""))
+    limiting = str(rec.get("limiting_method", "")).lower()
     lines.append("| Method | MRSD (mg) | Inputs | Status |")
     lines.append("| --- | --- | --- | --- |")
     lines.append(_dose_method_row("HED", "hed", rec, limiting))
@@ -379,15 +381,46 @@ def _render_limitations(data: ReportData) -> str:
     return "\n".join(lines)
 
 
+def _yaml_safe_value(v):
+    """Convert a value to a yaml-serializable Python primitive.
+
+    Handles numpy scalars (via ``.item()``), numpy arrays (via ``.tolist()``),
+    and non-finite floats (NaN/inf become YAML null).  Leaves ordinary Python
+    primitives unchanged.
+    """
+    if v is None:
+        return None
+    # numpy scalar
+    if hasattr(v, "item") and not isinstance(v, (str, bytes, list, tuple, dict)):
+        try:
+            return _yaml_safe_value(v.item())
+        except Exception:
+            pass
+    # numpy array
+    if hasattr(v, "tolist") and not isinstance(v, (list, tuple, str, bytes)):
+        try:
+            return v.tolist()
+        except Exception:
+            pass
+    if isinstance(v, float) and not math.isfinite(v):
+        return None  # NaN/inf become null in YAML
+    return v
+
+
 def _render_appendix(data: ReportData) -> str:
     lines = ["## 9. Appendix", ""]
     lines.append(f"- **Charon version:** {data.charon_version}")
     lines.append(f"- **Timestamp:** {data.timestamp}")
     lines.append("")
     lines.append("```yaml")
-    for key in sorted(data.metadata.keys()):
-        val = data.metadata[key]
-        lines.append(f"{key}: {val}")
+    safe_md = {k: _yaml_safe_value(v) for k, v in sorted(data.metadata.items())}
+    try:
+        yaml_text = yaml.safe_dump(
+            safe_md, default_flow_style=False, sort_keys=False
+        ).rstrip()
+    except Exception:
+        yaml_text = "`<unserializable metadata>`"
+    lines.append(yaml_text)
     lines.append("```")
     return "\n".join(lines)
 
