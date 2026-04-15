@@ -233,3 +233,114 @@ def test_render_ivive_audit_handles_missing_metadata():
     assert "## 4. IVIVE" in out
     # Should not crash; contains placeholder
     assert "-" in out or "not available" in out.lower()
+
+
+from charon.report.narrative import _md_cell
+
+
+def test_md_cell_escapes_pipe():
+    assert _md_cell("warn|bad") == "warn\\|bad"
+
+
+def test_md_cell_none_returns_dash():
+    assert _md_cell(None) == "-"
+
+
+def test_md_cell_normalizes_newlines():
+    assert _md_cell("line1\nline2") == "line1 line2"
+
+
+def test_render_adme_table_escapes_pipe_in_flag():
+    data = _make_data(
+        properties={
+            "logp": {
+                "value": 3.89,
+                "ci_lower": None,
+                "ci_upper": None,
+                "unit": "log",
+                "source": "ml_ensemble",
+                "flag": "warn|bad",
+                "method": None,
+            }
+        }
+    )
+    out = _render_adme_table(data)
+    assert "warn\\|bad" in out
+    assert "| warn|bad |" not in out
+
+
+from charon.report.narrative import _render_dose_projection, _render_pk_results
+
+
+def test_render_pk_results_parameters_table():
+    data = _make_data(
+        pk_params={
+            "cmax": 120.0,
+            "tmax": 1.0,
+            "auc_0_inf": 500.0,
+            "auc_0_24": 480.0,
+            "half_life": 3.5,
+            "cl_apparent": 24.1,
+            "vss": 95.0,
+            "bioavailability": 0.44,
+            "fa": 0.95,
+            "fg": 0.57,
+            "fh": 0.82,
+        },
+        pk_table=[
+            {"time_h": 0.0, "cp_plasma_ug_L": 0.0, "cp_blood_ug_L": 0.0},
+            {"time_h": 1.0, "cp_plasma_ug_L": 120.0, "cp_blood_ug_L": 108.0},
+            {"time_h": 4.0, "cp_plasma_ug_L": 60.0, "cp_blood_ug_L": 54.0},
+        ],
+    )
+    out = _render_pk_results(data)
+    assert "## 5. PK Simulation Results" in out
+    assert "120" in out  # Cmax
+    assert "0.44" in out or "4.4e-01" in out  # F
+    assert "Fa" in out and "Fg" in out and "Fh" in out
+    # Cp-time table
+    assert "| Time" in out
+    assert "1" in out and "4" in out
+
+
+def test_render_pk_results_handles_missing_params():
+    data = _make_data(pk_params={"cmax": None, "auc_0_inf": None}, pk_table=[])
+    out = _render_pk_results(data)
+    assert "## 5. PK Simulation Results" in out
+    # Dash for missing values
+    assert "-" in out
+
+
+def test_render_dose_projection_no_rec():
+    data = _make_data()
+    out = _render_dose_projection(data)
+    assert "## 6. FIH Dose Projection" in out
+    assert "not run" in out.lower() or "no " in out.lower()
+
+
+def test_render_dose_projection_hed_only():
+    data = _make_data(
+        dose_recommendation={
+            "mrsd_mg": 56.45,
+            "limiting_method": "hed",
+            "route": "oral",
+            "safety_factor": 10.0,
+            "salt_factor": 1.0,
+            "rationale": "HED: 56.45 mg\nLimiting: hed",
+            "hed": {"mrsd_mg": 56.45},
+            "mabel": None,
+            "pad": None,
+        }
+    )
+    out = _render_dose_projection(data)
+    assert "## 6. FIH Dose Projection" in out
+    assert "| Method" in out
+    # Three rows: HED, MABEL, PAD
+    assert "HED" in out
+    assert "MABEL" in out
+    assert "PAD" in out
+    assert "insufficient inputs" in out.lower()
+    # Rationale present
+    assert "Limiting: hed" in out
+    # Limiting method marked
+    assert "**56.45**" in out or "**56.5**" in out or "**5.6e+01**" in out

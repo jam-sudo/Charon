@@ -109,6 +109,17 @@ _ADME_ROW_ORDER: tuple[str, ...] = (
 )
 
 
+def _md_cell(s: object | None) -> str:
+    """Escape a free-form string for safe use inside a Markdown table cell.
+
+    Replaces ``|`` with ``\\|`` and newlines with spaces.  Returns ``"-"``
+    for ``None``.
+    """
+    if s is None:
+        return "-"
+    return str(s).replace("|", "\\|").replace("\n", " ")
+
+
 def _ci_cell(entry: dict) -> str:
     lo = entry.get("ci_lower")
     hi = entry.get("ci_upper")
@@ -131,12 +142,12 @@ def _render_adme_table(data: ReportData) -> str:
             continue
         lines.append(
             "| {name} | {val} | {ci} | {unit} | {src} | {flag} |".format(
-                name=key,
+                name=_md_cell(key),
                 val=format_value(entry.get("value")),
                 ci=_ci_cell(entry),
-                unit=entry.get("unit") or "-",
-                src=entry.get("source") or "-",
-                flag=entry.get("flag") or "-",
+                unit=_md_cell(entry.get("unit")),
+                src=_md_cell(entry.get("source")),
+                flag=_md_cell(entry.get("flag")),
             )
         )
     return "\n".join(lines)
@@ -169,4 +180,108 @@ def _render_ivive_audit(data: ReportData) -> str:
     lines.append(f"- **fu_b:** {format_value(fu_b)}")
     lines.append(f"- **Renal CL:** {format_value(cl_renal)} L/h")
     lines.append(f"- **In-vivo apparent CL:** {format_value(cl_app)} L/h")
+    return "\n".join(lines)
+
+
+_PK_PARAM_LABELS: tuple[tuple[str, str, str], ...] = (
+    ("cmax", "Cmax", "ug/L"),
+    ("tmax", "Tmax", "h"),
+    ("auc_0_inf", "AUC(0-inf)", "ug*h/L"),
+    ("auc_0_24", "AUC(0-24)", "ug*h/L"),
+    ("half_life", "t1/2", "h"),
+    ("cl_apparent", "CL apparent", "L/h"),
+    ("vss", "Vss", "L"),
+    ("bioavailability", "F", "-"),
+    ("fa", "Fa", "-"),
+    ("fg", "Fg", "-"),
+    ("fh", "Fh", "-"),
+)
+
+
+def _render_pk_results(data: ReportData) -> str:
+    lines = [
+        "## 5. PK Simulation Results",
+        "",
+        f"Route: **{_md_cell(data.route)}**  ·  "
+        f"Dose: **{format_value(data.dose_mg)} mg**  ·  "
+        f"Duration: **{format_value(data.duration_h)} h**",
+        "",
+        "### PK Parameters",
+        "",
+        "| Parameter | Value | Unit |",
+        "| --- | --- | --- |",
+    ]
+    for key, label, unit in _PK_PARAM_LABELS:
+        val = data.pk_params.get(key)
+        lines.append(
+            f"| {_md_cell(label)} | {format_value(val)} | {_md_cell(unit)} |"
+        )
+
+    lines.append("")
+    lines.append("### Concentration-Time Profile (canonical timepoints)")
+    lines.append("")
+    if not data.pk_table:
+        lines.append("*No time-course data available.*")
+        return "\n".join(lines)
+
+    lines.append("| Time (h) | Cp plasma (ug/L) | Cp blood (ug/L) |")
+    lines.append("| --- | --- | --- |")
+    for row in data.pk_table:
+        lines.append(
+            f"| {format_value(row['time_h'])} "
+            f"| {format_value(row['cp_plasma_ug_L'])} "
+            f"| {format_value(row['cp_blood_ug_L'])} |"
+        )
+    return "\n".join(lines)
+
+
+def _dose_method_row(
+    name_display: str,
+    method_key: str,
+    rec: dict,
+    limiting: str,
+) -> str:
+    sub = rec.get(method_key)
+    if sub is None:
+        return f"| {_md_cell(name_display)} | - | - | insufficient inputs |"
+    mrsd = sub.get("mrsd_mg")
+    val_cell = format_value(mrsd)
+    if method_key == limiting:
+        val_cell = f"**{val_cell}**"
+    inputs = {
+        "hed": f"NOAEL={format_value(sub.get('noael_mg_kg'))} mg/kg "
+               f"({_md_cell(sub.get('noael_species') or sub.get('species'))})",
+        "mabel": f"Kd={format_value(sub.get('target_kd_nM'))} nM",
+        "pad": f"Ceff={format_value(sub.get('target_ceff_nM'))} nM",
+    }.get(method_key, "-")
+    return f"| {_md_cell(name_display)} | {val_cell} | {inputs} | computed |"
+
+
+def _render_dose_projection(data: ReportData) -> str:
+    lines = ["## 6. FIH Dose Projection", ""]
+    rec = data.dose_recommendation
+    if rec is None:
+        lines.append(
+            "*FIH dose projection was not run for this pipeline execution.*"
+        )
+        return "\n".join(lines)
+
+    limiting = str(rec.get("limiting_method", ""))
+    lines.append("| Method | MRSD (mg) | Inputs | Status |")
+    lines.append("| --- | --- | --- | --- |")
+    lines.append(_dose_method_row("HED", "hed", rec, limiting))
+    lines.append(_dose_method_row("MABEL", "mabel", rec, limiting))
+    lines.append(_dose_method_row("PAD", "pad", rec, limiting))
+    lines.append("")
+    lines.append(
+        f"Safety factor: **{format_value(rec.get('safety_factor'))}**  ·  "
+        f"Salt factor: **{format_value(rec.get('salt_factor'))}**  ·  "
+        f"Limiting method: **{limiting.upper()}**"
+    )
+    rationale = rec.get("rationale") or ""
+    if rationale:
+        lines.append("")
+        lines.append("```")
+        lines.append(rationale)
+        lines.append("```")
     return "\n".join(lines)
