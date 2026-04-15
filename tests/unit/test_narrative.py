@@ -344,3 +344,186 @@ def test_render_dose_projection_hed_only():
     assert "Limiting: hed" in out
     # Limiting method marked
     assert "**56.45**" in out or "**56.5**" in out or "**5.6e+01**" in out
+
+
+def test_md_cell_escapes_backslash_before_pipe():
+    # a\\|b in the source, i.e. backslash + pipe, must not break table columns
+    assert _md_cell("a\\|b") == "a\\\\\\|b"
+
+
+def test_md_cell_normalizes_carriage_return():
+    assert _md_cell("line1\r\nline2") == "line1  line2"
+
+
+from charon.report.narrative import (
+    _render_appendix,
+    _render_limitations,
+    _render_uncertainty,
+    render_report,
+)
+
+
+def test_render_uncertainty_none_returns_empty():
+    data = _make_data(uncertainty=None)
+    out = _render_uncertainty(data)
+    assert out == "" or out.strip() == ""
+
+
+def test_render_uncertainty_populated():
+    data = _make_data(
+        uncertainty={
+            "point_estimate_mg": 50.0,
+            "ci_90_lower_mg": 20.0,
+            "ci_90_upper_mg": 120.0,
+            "ci_ratio": 6.0,
+            "confidence": "MEDIUM",
+            "n_samples": 100,
+            "n_successful": 95,
+            "convergence_met": True,
+            "sensitivity": {"clint": 0.7, "fu_p": 0.2, "logp": 0.1},
+            "limiting_parameter": "clint",
+            "recommendation": "Experimental clint measurement would narrow CI by ~70%",
+            "r_squared": 0.85,
+        }
+    )
+    out = _render_uncertainty(data)
+    assert "## 7. Uncertainty Analysis" in out
+    assert "50" in out and "20" in out and "120" in out
+    assert "MEDIUM" in out
+    assert "clint" in out
+    assert "70" in out  # 70.0%
+    assert "0.85" in out  # R²
+
+
+def test_render_uncertainty_low_r_squared_warning():
+    data = _make_data(
+        uncertainty={
+            "point_estimate_mg": 50.0,
+            "ci_90_lower_mg": 20.0,
+            "ci_90_upper_mg": 120.0,
+            "ci_ratio": 6.0,
+            "confidence": "MEDIUM",
+            "n_samples": 100,
+            "n_successful": 95,
+            "convergence_met": True,
+            "sensitivity": {"clint": 0.5},
+            "limiting_parameter": "clint",
+            "recommendation": "",
+            "r_squared": 0.5,
+        }
+    )
+    out = _render_uncertainty(data)
+    assert "non-linear" in out.lower() or "nonlinear" in out.lower() or "warn" in out.lower()
+
+
+def test_render_limitations_always_has_boilerplate():
+    data = _make_data()
+    out = _render_limitations(data)
+    assert "## 8. Limitations" in out
+    assert "well-stirred" in out.lower() or "well stirred" in out.lower()
+    assert "IR" in out or "immediate-release" in out.lower()
+
+
+def test_render_limitations_appends_warnings():
+    data = _make_data(warnings=["Applicability domain: LOW"])
+    out = _render_limitations(data)
+    assert "Applicability domain: LOW" in out
+
+
+def test_render_limitations_appends_property_flags():
+    data = _make_data(
+        properties={
+            "clint_uL_min_mg": {
+                "value": 93.0,
+                "ci_lower": None,
+                "ci_upper": None,
+                "unit": "uL/min/mg",
+                "source": "ml_ensemble",
+                "flag": "clint_tier2_ml",
+                "method": None,
+            }
+        }
+    )
+    out = _render_limitations(data)
+    assert "clint_tier2_ml" in out
+
+
+def test_render_appendix_has_metadata_and_version():
+    data = _make_data(metadata={"species": "human", "solver_method": "BDF"})
+    out = _render_appendix(data)
+    assert "## 9. Appendix" in out
+    assert "0.1.0" in out  # charon_version
+    assert "BDF" in out
+    assert "2026-04-15" in out
+
+
+def test_render_report_contains_all_sections():
+    data = _make_data(
+        properties={
+            "logp": {
+                "value": 3.89,
+                "ci_lower": 3.4,
+                "ci_upper": 4.3,
+                "unit": "log",
+                "source": "ml_ensemble",
+                "flag": None,
+                "method": None,
+            }
+        },
+        ivive_summary={"liver_model": "well_stirred", "fu_b": 0.071},
+        pk_params={"cmax": 120.0, "cl_apparent": 24.1, "auc_0_inf": 500.0},
+        pk_table=[{"time_h": 1.0, "cp_plasma_ug_L": 120.0, "cp_blood_ug_L": 108.0}],
+        dose_recommendation={
+            "mrsd_mg": 56.45,
+            "limiting_method": "hed",
+            "route": "oral",
+            "safety_factor": 10.0,
+            "salt_factor": 1.0,
+            "rationale": "ok",
+            "hed": {"mrsd_mg": 56.45},
+            "mabel": None,
+            "pad": None,
+        },
+    )
+    out = render_report(data)
+    for section in (
+        "# FIH Dose Rationale Report",
+        "## 1. Executive Summary",
+        "## 2. Compound Profile",
+        "## 3. ADME Predictions",
+        "## 4. IVIVE",
+        "## 5. PK Simulation Results",
+        "## 6. FIH Dose Projection",
+        "## 8. Limitations",
+        "## 9. Appendix",
+    ):
+        assert section in out, f"missing section: {section}"
+    # No uncertainty section when uncertainty is None
+    assert "## 7. Uncertainty Analysis" not in out
+
+
+def test_render_report_includes_uncertainty_when_present():
+    data = _make_data(
+        uncertainty={
+            "point_estimate_mg": 50.0,
+            "ci_90_lower_mg": 20.0,
+            "ci_90_upper_mg": 120.0,
+            "ci_ratio": 6.0,
+            "confidence": "MEDIUM",
+            "n_samples": 100,
+            "n_successful": 95,
+            "convergence_met": True,
+            "sensitivity": {"clint": 0.7},
+            "limiting_parameter": "clint",
+            "recommendation": "",
+            "r_squared": 0.9,
+        }
+    )
+    out = render_report(data)
+    assert "## 7. Uncertainty Analysis" in out
+
+
+def test_render_report_no_raw_none():
+    data = _make_data()
+    out = render_report(data)
+    assert "| None |" not in out

@@ -112,12 +112,18 @@ _ADME_ROW_ORDER: tuple[str, ...] = (
 def _md_cell(s: object | None) -> str:
     """Escape a free-form string for safe use inside a Markdown table cell.
 
-    Replaces ``|`` with ``\\|`` and newlines with spaces.  Returns ``"-"``
-    for ``None``.
+    Escapes backslash, pipe, and newline characters.  Returns ``"-"`` for
+    ``None``.
     """
     if s is None:
         return "-"
-    return str(s).replace("|", "\\|").replace("\n", " ")
+    return (
+        str(s)
+        .replace("\\", "\\\\")
+        .replace("|", "\\|")
+        .replace("\n", " ")
+        .replace("\r", " ")
+    )
 
 
 def _ci_cell(entry: dict) -> str:
@@ -285,3 +291,126 @@ def _render_dose_projection(data: ReportData) -> str:
         lines.append(rationale)
         lines.append("```")
     return "\n".join(lines)
+
+
+def _render_uncertainty(data: ReportData) -> str:
+    unc = data.uncertainty
+    if unc is None:
+        return ""
+    lines = ["## 7. Uncertainty Analysis", ""]
+    point = format_value(unc.get("point_estimate_mg"))
+    lo = format_value(unc.get("ci_90_lower_mg"))
+    hi = format_value(unc.get("ci_90_upper_mg"))
+    conf = unc.get("confidence", "?")
+    lines.append(
+        f"**Dose:** {point} mg  ·  "
+        f"**90% CI:** [{lo} – {hi}] mg  ·  "
+        f"**Confidence:** {conf}"
+    )
+    lines.append("")
+
+    sens = unc.get("sensitivity") or {}
+    if sens:
+        lines.append("### Parameter Sensitivity (SRC²)")
+        lines.append("")
+        lines.append("| Rank | Parameter | Importance |")
+        lines.append("| --- | --- | --- |")
+        sorted_sens = sorted(sens.items(), key=lambda kv: kv[1], reverse=True)
+        for rank, (name, imp) in enumerate(sorted_sens, start=1):
+            pct = float(imp) * 100.0
+            lines.append(f"| {rank} | {_md_cell(name)} | {pct:.1f}% |")
+        lines.append("")
+
+    r2 = unc.get("r_squared")
+    if r2 is not None:
+        lines.append(f"SRC regression R² = {format_value(r2)}")
+        if float(r2) < 0.7:
+            lines.append(
+                "> **Warning:** R² < 0.7 indicates substantial nonlinear "
+                "behavior; SRC² values underestimate interaction effects and "
+                "should be treated as first-order approximations only."
+            )
+        lines.append("")
+
+    rec_text = unc.get("recommendation") or ""
+    if rec_text:
+        lines.append(f"> {rec_text}")
+        lines.append("")
+
+    lines.append(
+        f"Samples: {unc.get('n_successful', 0)} successful / "
+        f"{unc.get('n_samples', 0)} total  ·  "
+        f"converged: {unc.get('convergence_met', False)}"
+    )
+    return "\n".join(lines)
+
+
+_LIMITATIONS_BOILERPLATE = (
+    "- Hepatic clearance uses the well-stirred liver model by default; "
+    "parallel-tube or dispersion models may be more appropriate for "
+    "high-extraction compounds.\n"
+    "- Oral absorption assumes an immediate-release (IR) formulation; "
+    "modified-release kinetics are not modeled in Phase A.\n"
+    "- Conformal 90% prediction intervals provide marginal coverage, "
+    "not conditional coverage. Actual coverage on out-of-domain compounds "
+    "may be substantially lower than 90%.\n"
+    "- Rodgers & Rowland Kp prediction may overestimate tissue partitioning "
+    "for highly-bound weak bases and lipophilic acids.\n"
+    "- Dose projection uses apparent PK (CL/F for oral, CL for IV). No "
+    "separate bioavailability correction is applied."
+)
+
+
+def _render_limitations(data: ReportData) -> str:
+    lines = ["## 8. Limitations & Caveats", "", _LIMITATIONS_BOILERPLATE, ""]
+    extras: list[str] = []
+    for w in data.warnings:
+        extras.append(f"- {w}")
+    flag_seen: set[str] = set()
+    for key, entry in data.properties.items():
+        flag = entry.get("flag") if isinstance(entry, dict) else None
+        if flag and flag not in flag_seen:
+            flag_seen.add(flag)
+            extras.append(f"- `{key}`: flag = `{flag}`")
+    if extras:
+        lines.append("Additional run-specific notes:")
+        lines.append("")
+        lines.extend(extras)
+    return "\n".join(lines)
+
+
+def _render_appendix(data: ReportData) -> str:
+    lines = ["## 9. Appendix", ""]
+    lines.append(f"- **Charon version:** {data.charon_version}")
+    lines.append(f"- **Timestamp:** {data.timestamp}")
+    lines.append("")
+    lines.append("```yaml")
+    for key in sorted(data.metadata.keys()):
+        val = data.metadata[key]
+        lines.append(f"{key}: {val}")
+    lines.append("```")
+    return "\n".join(lines)
+
+
+_SECTION_RENDERERS = (
+    _render_header,
+    _render_executive_summary,
+    _render_compound_profile,
+    _render_adme_table,
+    _render_ivive_audit,
+    _render_pk_results,
+    _render_dose_projection,
+    _render_uncertainty,
+    _render_limitations,
+    _render_appendix,
+)
+
+
+def render_report(data: ReportData) -> str:
+    """Render a full Markdown report from a :class:`ReportData`."""
+    parts: list[str] = []
+    for fn in _SECTION_RENDERERS:
+        chunk = fn(data)
+        if chunk:
+            parts.append(chunk)
+    return "\n\n".join(parts) + "\n"
