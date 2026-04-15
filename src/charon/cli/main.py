@@ -27,6 +27,7 @@ from charon.predict import predict_properties
 from charon.report import (
     ReportData,
     collect,
+    export_report,
 )
 from charon.report.narrative import format_value as _format_value
 
@@ -274,6 +275,61 @@ def _cmd_recommend(args: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------
+# Subcommand: report
+# ---------------------------------------------------------------------------
+
+
+def _cmd_report(args: argparse.Namespace) -> int:
+    from pathlib import Path as _P
+
+    dp = _build_dose_projection(args)
+    if dp is None:
+        return _fail(
+            "report requires at least one target: "
+            "--noael + --noael-species, --target-kd, or --target-ceff"
+        )
+    unc_cfg: UncertaintyConfig | None = None
+    if args.uncertainty:
+        unc_cfg = UncertaintyConfig(n_samples=args.n_samples)
+
+    if not args.quiet:
+        print(f"[1/4] Running pipeline for {args.smiles}...")
+    try:
+        pipe = _build_pipeline_from_smiles(
+            args, dose_projection=dp, uncertainty=unc_cfg
+        )
+        result = pipe.run()
+    except ValueError as e:
+        return _fail(f"Invalid input: {e}")
+    except Exception as e:  # pragma: no cover
+        return _fail(f"{type(e).__name__}: {e}", code=2)
+
+    if not args.quiet:
+        if args.uncertainty:
+            print(f"[2/4] Uncertainty propagation ({args.n_samples} samples)...")
+        print("[3/4] Collecting report data...")
+    data = collect(result)
+
+    full_profile: dict | None = None
+    if args.include_full_profile:
+        import numpy as _np
+        full_profile = {
+            "time_h": _np.asarray(result.time_h, dtype=float).tolist(),
+            "cp_plasma_ug_L": _np.asarray(result.cp_plasma, dtype=float).tolist(),
+            "cp_blood_ug_L": _np.asarray(result.cp_blood, dtype=float).tolist(),
+        }
+
+    if not args.quiet:
+        print("[4/4] Writing report...")
+    md_path, json_path = export_report(data, _P(args.output), full_profile=full_profile)
+    print()
+    print("Wrote:")
+    print(f"  {md_path}")
+    print(f"  {json_path}")
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # Argument parser
 # ---------------------------------------------------------------------------
 
@@ -298,6 +354,7 @@ def _build_parser() -> argparse.ArgumentParser:
         )
         sp.add_argument("--compound-name", default=None, dest="compound_name")
         sp.add_argument("--json", action="store_true", default=False)
+        sp.add_argument("-q", "--quiet", action="store_true", default=False)
 
     # Shared dose-projection options
     def _add_dose_opts(sp: argparse.ArgumentParser) -> None:
@@ -376,15 +433,34 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_common(sp_rc)
     sp_rc.set_defaults(func=_cmd_recommend)
 
-    # report (Task 11 stub — remove this when Task 11 registers the real handler)
+    # report
     sp_rp = sub.add_parser(
         "report",
-        help="(Task 11) Full pipeline + write report files — not yet implemented",
+        help="Full pipeline + write Markdown/JSON report files",
     )
-    sp_rp.add_argument("smiles", nargs="?")
-    sp_rp.set_defaults(
-        func=lambda args: _fail("report not yet implemented", code=2)
+    sp_rp.add_argument("smiles")
+    sp_rp.add_argument(
+        "--route", required=True, choices=["iv_bolus", "iv_infusion", "oral"]
     )
+    sp_rp.add_argument("--dose", type=float, required=True, help="dose in mg")
+    sp_rp.add_argument("--duration", type=float, default=72.0)
+    sp_rp.add_argument(
+        "--infusion-duration", type=float, default=0.0, dest="infusion_duration"
+    )
+    _add_dose_opts(sp_rp)
+    sp_rp.add_argument("--uncertainty", action="store_true", default=False)
+    sp_rp.add_argument("--n-samples", type=int, default=500, dest="n_samples")
+    sp_rp.add_argument(
+        "--output", required=True, help="output path (.md appended if absent)"
+    )
+    sp_rp.add_argument(
+        "--include-full-profile",
+        action="store_true",
+        default=False,
+        dest="include_full_profile",
+    )
+    _add_common(sp_rp)
+    sp_rp.set_defaults(func=_cmd_report)
 
     return p
 

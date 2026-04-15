@@ -304,3 +304,62 @@ def test_recommend_with_uncertainty_flag(capsys, monkeypatch):
     out = capsys.readouterr().out
     assert "25" in out and "125" in out
     assert "MEDIUM" in out
+
+
+def test_report_writes_md_and_json(tmp_path, monkeypatch):
+    _install_fake_pipeline_with_dose(monkeypatch)
+    out_base = tmp_path / "run"
+    rc = main(
+        [
+            "report",
+            "CCO",
+            "--route", "oral",
+            "--dose", "5",
+            "--noael", "50",
+            "--noael-species", "rat",
+            "--output", str(out_base) + ".md",
+        ]
+    )
+    assert rc == 0
+    md = tmp_path / "run.md"
+    js = tmp_path / "run.json"
+    assert md.exists()
+    assert js.exists()
+    md_text = md.read_text()
+    assert "# FIH Dose Rationale Report" in md_text
+    assert "CCO" in md_text
+    parsed = json.loads(js.read_text())
+    assert parsed["route"] == "oral"
+    assert parsed["dose_mg"] == pytest.approx(5.0)
+
+
+def test_report_accepts_path_without_suffix(tmp_path, monkeypatch):
+    _install_fake_pipeline_with_dose(monkeypatch)
+    out_base = tmp_path / "no_suffix"
+    rc = main(
+        [
+            "report",
+            "CCO",
+            "--route", "oral",
+            "--dose", "5",
+            "--noael", "50",
+            "--noael-species", "rat",
+            "--output", str(out_base),
+        ]
+    )
+    assert rc == 0
+    assert (tmp_path / "no_suffix.md").exists()
+    assert (tmp_path / "no_suffix.json").exists()
+
+
+def test_report_requires_output(capsys, monkeypatch):
+    _install_fake_pipeline_with_dose(monkeypatch)
+    with pytest.raises(SystemExit):
+        # argparse exits for missing required --output
+        main(
+            [
+                "report", "CCO",
+                "--route", "oral", "--dose", "5",
+                "--noael", "50", "--noael-species", "rat",
+            ]
+        )
