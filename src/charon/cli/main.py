@@ -373,7 +373,6 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_dose_opts(sp_rc)
     sp_rc.add_argument("--uncertainty", action="store_true", default=False)
     sp_rc.add_argument("--n-samples", type=int, default=500, dest="n_samples")
-    sp_rc.add_argument("--seed", type=int, default=42)
     _add_common(sp_rc)
     sp_rc.set_defaults(func=_cmd_recommend)
 
