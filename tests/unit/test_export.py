@@ -139,3 +139,52 @@ def test_export_json_handles_numpy_values(tmp_path: Path):
     parsed = json.loads(out.read_text())
     assert parsed["metadata"]["solver_nfev"] == 42
     assert parsed["metadata"]["cl"] == pytest.approx(1.23)
+
+
+def test_export_json_non_finite_floats_become_null(tmp_path):
+    data = _make_data()
+    data_with_inf = ReportData(
+        **{
+            **{k: getattr(data, k) for k in data.__dataclass_fields__},
+            "metadata": {"bad": float("inf"), "also_bad": float("nan"), "ok": 1.5},
+        }
+    )
+    out = tmp_path / "inf.json"
+    export_json(data_with_inf, out)
+    text = out.read_text()
+    # Strict JSON parse (raises on bare NaN/Infinity tokens)
+    parsed = json.loads(text)
+    assert parsed["metadata"]["bad"] is None
+    assert parsed["metadata"]["also_bad"] is None
+    assert parsed["metadata"]["ok"] == 1.5
+    # Should not contain bare NaN / Infinity tokens
+    assert "NaN" not in text
+    assert "Infinity" not in text
+
+
+def test_export_json_nested_numpy_array(tmp_path):
+    data = _make_data()
+    data_nested = ReportData(
+        **{
+            **{k: getattr(data, k) for k in data.__dataclass_fields__},
+            "metadata": {"arr": np.array([1.0, 2.0, 3.0])},
+        }
+    )
+    out = tmp_path / "nested.json"
+    export_json(data_nested, out)
+    parsed = json.loads(out.read_text())
+    assert parsed["metadata"]["arr"] == [1.0, 2.0, 3.0]
+
+
+def test_export_json_numpy_bool(tmp_path):
+    data = _make_data()
+    data_bool = ReportData(
+        **{
+            **{k: getattr(data, k) for k in data.__dataclass_fields__},
+            "metadata": {"converged": np.bool_(True)},
+        }
+    )
+    out = tmp_path / "bool.json"
+    export_json(data_bool, out)
+    parsed = json.loads(out.read_text())
+    assert parsed["metadata"]["converged"] is True

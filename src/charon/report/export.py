@@ -1,16 +1,17 @@
 """Sprint 6 — Report file exporters.
 
 Writes a :class:`ReportData` to a Markdown file and a sibling JSON file.
-No external dependencies: uses the ``json`` stdlib module and a small
-``_json_default`` helper to handle numpy scalars.
+No external dependencies: uses the ``json`` stdlib module plus a private
+``_sanitize_for_json`` helper that coerces numpy scalars/arrays, Path
+objects, and non-finite floats into strict-JSON-safe primitives.
 """
 
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 
@@ -18,16 +19,35 @@ from charon.report.collector import ReportData
 from charon.report.narrative import render_report
 
 
-def _json_default(obj: Any) -> Any:
+def _sanitize_for_json(obj):
+    """Recursively coerce values into strict-JSON-safe primitives.
+
+    - dict / list / tuple → recursed
+    - numpy scalars → Python scalar via .item()
+    - numpy arrays → nested lists via .tolist()
+    - non-finite floats (NaN, ±inf) → None (same policy as narrative YAML)
+    - Path → str
+    """
+    if obj is None:
+        return None
+    if isinstance(obj, dict):
+        return {k: _sanitize_for_json(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_sanitize_for_json(v) for v in obj]
+    if isinstance(obj, np.bool_):
+        return bool(obj)
     if isinstance(obj, np.integer):
         return int(obj)
     if isinstance(obj, np.floating):
-        return float(obj)
+        fv = float(obj)
+        return fv if math.isfinite(fv) else None
     if isinstance(obj, np.ndarray):
-        return obj.tolist()
+        return _sanitize_for_json(obj.tolist())
+    if isinstance(obj, float):
+        return obj if math.isfinite(obj) else None
     if isinstance(obj, Path):
         return str(obj)
-    raise TypeError(f"Unsupported type for JSON serialization: {type(obj)!r}")
+    return obj
 
 
 def export_markdown(data: ReportData, path: Path) -> Path:
@@ -54,8 +74,9 @@ def export_json(
     payload = asdict(data)
     if include_full_profile and full_profile is not None:
         payload["full_profile"] = full_profile
+    sanitized = _sanitize_for_json(payload)
     path.write_text(
-        json.dumps(payload, indent=2, sort_keys=False, default=_json_default),
+        json.dumps(sanitized, indent=2, sort_keys=False, allow_nan=False),
         encoding="utf-8",
     )
     return path.resolve()
