@@ -9,11 +9,84 @@ computed upstream in the pipeline.
 
 from __future__ import annotations
 
+from dataclasses import asdict as _dc_asdict
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
-from charon.core.schema import PredictedProperty
+import numpy as np
+
+from charon.core.schema import PKParameters, PredictedProperty
 from charon.pipeline import PipelineResult
+from charon.translational.dose_projector import FIHDoseRecommendation
+from charon.uncertainty.dose_range import UncertaintyResult
+
+
+_CANONICAL_TIMEPOINTS_H: tuple[float, ...] = (
+    0.0, 0.25, 0.5, 1.0, 2.0, 4.0, 6.0, 8.0, 12.0, 24.0, 48.0, 72.0,
+)
+
+
+def _flatten_pk_params(pk: PKParameters) -> dict[str, float | None]:
+    return {
+        "cmax": pk.cmax,
+        "tmax": pk.tmax,
+        "auc_0_inf": pk.auc_0_inf,
+        "auc_0_24": pk.auc_0_24,
+        "half_life": pk.half_life,
+        "cl_apparent": pk.cl_apparent,
+        "vss": pk.vss,
+        "bioavailability": pk.bioavailability,
+        "fa": pk.fa,
+        "fg": pk.fg,
+        "fh": pk.fh,
+    }
+
+
+def _sample_pk_table(
+    time_h: np.ndarray,
+    cp_plasma: np.ndarray,
+    cp_blood: np.ndarray,
+) -> list[dict]:
+    t_arr = np.asarray(time_h, dtype=float)
+    if t_arr.size == 0:
+        return []
+    t_max = float(t_arr[-1])
+    rows: list[dict] = []
+    seen_idx: set[int] = set()
+    for t in _CANONICAL_TIMEPOINTS_H:
+        if t > t_max:
+            break
+        idx = int(np.searchsorted(t_arr, t))
+        if idx >= t_arr.size:
+            idx = t_arr.size - 1
+        # searchsorted gives left insertion; pick the nearest of idx-1/idx
+        if idx > 0 and abs(t_arr[idx - 1] - t) <= abs(t_arr[idx] - t):
+            idx -= 1
+        if idx in seen_idx:
+            continue
+        seen_idx.add(idx)
+        rows.append(
+            {
+                "time_h": float(t_arr[idx]),
+                "cp_plasma_ug_L": float(cp_plasma[idx]),
+                "cp_blood_ug_L": float(cp_blood[idx]),
+            }
+        )
+    return rows
+
+
+def _flatten_dose_recommendation(
+    rec: FIHDoseRecommendation | None,
+) -> dict | None:
+    if rec is None:
+        return None
+    return rec.model_dump()
+
+
+def _flatten_uncertainty(unc: UncertaintyResult | None) -> dict | None:
+    if unc is None:
+        return None
+    return _dc_asdict(unc)
 
 
 _PROPERTY_FIELDS: list[tuple[str, str, str]] = [
@@ -137,13 +210,13 @@ def collect(
         compound_type=compound.properties.physicochemical.compound_type,
         properties=_flatten_properties(compound.properties),
         ivive_summary=_ivive_summary_from_metadata(md),
-        pk_params={},
-        pk_table=[],
+        pk_params=_flatten_pk_params(result.pk_parameters),
+        pk_table=_sample_pk_table(result.time_h, result.cp_plasma, result.cp_blood),
         route=str(md.get("route", "")),
         dose_mg=float(md.get("dose_mg", 0.0)),
         duration_h=float(md.get("duration_h", 0.0)),
-        dose_recommendation=None,
-        uncertainty=None,
+        dose_recommendation=_flatten_dose_recommendation(result.dose_recommendation),
+        uncertainty=_flatten_uncertainty(result.uncertainty),
         warnings=list(warnings) if warnings else [],
         metadata=dict(md),
         timestamp=timestamp or _iso_now(),

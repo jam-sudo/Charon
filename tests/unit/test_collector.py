@@ -239,3 +239,99 @@ def test_collect_skips_none_properties():
     data = collect(result)
     # No properties populated in the minimal fixture
     assert data.properties == {}
+
+
+from charon.translational.dose_projector import FIHDoseRecommendation
+from charon.translational.hed import HEDResult
+from charon.uncertainty.dose_range import UncertaintyResult
+
+
+def test_collect_pk_params_flattened():
+    result = _make_minimal_result()
+    data = collect(result)
+    assert data.pk_params["cmax"] == pytest.approx(10.0)
+    assert data.pk_params["auc_0_inf"] == pytest.approx(50.0)
+    assert data.pk_params["cl_apparent"] == pytest.approx(0.2)
+    assert data.pk_params["vss"] == pytest.approx(1.5)
+    assert "bioavailability" in data.pk_params
+
+
+def test_collect_pk_table_uses_canonical_timepoints():
+    result = _make_minimal_result()
+    data = collect(result)
+    # Canonical points <= max(time_h=24.0): 0, 0.25, 0.5, 1, 2, 4, 6, 8, 12, 24
+    times = [row["time_h"] for row in data.pk_table]
+    assert 0.0 in times
+    assert 1.0 in times
+    assert 24.0 in times
+    # 48 and 72 are beyond duration
+    assert 48.0 not in times
+    assert 72.0 not in times
+    # Monotonic and <= 12 entries
+    assert times == sorted(times)
+    assert len(data.pk_table) <= 12
+
+
+def test_collect_pk_table_cp_values():
+    result = _make_minimal_result()
+    data = collect(result)
+    first = data.pk_table[0]
+    assert "cp_plasma_ug_L" in first
+    assert "cp_blood_ug_L" in first
+    assert isinstance(first["cp_plasma_ug_L"], float)
+
+
+def test_collect_dose_recommendation_flattened():
+    result = _make_minimal_result()
+    hed = HEDResult(
+        noael_mg_kg=50.0,
+        noael_species="rat",
+        km_animal=6.2,
+        km_human=37.0,
+        hed_mg_kg=8.06,
+        body_weight_kg=70.0,
+        safety_factor=10.0,
+        mrsd_mg=56.45,
+    )
+    rec = FIHDoseRecommendation(
+        mrsd_mg=56.45,
+        limiting_method="hed",
+        hed=hed,
+        mabel=None,
+        pad=None,
+        safety_factor=10.0,
+        salt_factor=1.0,
+        route="oral",
+        rationale="HED: 56.45 mg",
+    )
+    result.dose_recommendation = rec
+    data = collect(result)
+    assert data.dose_recommendation is not None
+    assert data.dose_recommendation["mrsd_mg"] == pytest.approx(56.45)
+    assert data.dose_recommendation["limiting_method"] == "hed"
+    assert data.dose_recommendation["hed"]["mrsd_mg"] == pytest.approx(56.45)
+    assert data.dose_recommendation["mabel"] is None
+
+
+def test_collect_uncertainty_flattened():
+    result = _make_minimal_result()
+    unc = UncertaintyResult(
+        point_estimate_mg=5.0,
+        ci_90_lower_mg=2.0,
+        ci_90_upper_mg=12.0,
+        ci_ratio=6.0,
+        confidence="MEDIUM",
+        n_samples=100,
+        n_successful=95,
+        convergence_met=True,
+        sensitivity={"clint": 0.7, "fu_p": 0.2, "logp": 0.1},
+        limiting_parameter="clint",
+        recommendation="Experimental clint measurement would narrow CI by ~70%",
+        r_squared=0.85,
+    )
+    result.uncertainty = unc
+    data = collect(result)
+    assert data.uncertainty is not None
+    assert data.uncertainty["point_estimate_mg"] == pytest.approx(5.0)
+    assert data.uncertainty["confidence"] == "MEDIUM"
+    assert data.uncertainty["sensitivity"]["clint"] == pytest.approx(0.7)
