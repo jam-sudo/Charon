@@ -91,6 +91,8 @@ class Pipeline:
         infusion_duration_h: float = 0.0,
         liver_model: str = "well_stirred",
         compound_name: str | None = None,
+        dose_projection: DoseProjectionConfig | None = None,
+        uncertainty: UncertaintyConfig | None = None,
     ) -> "Pipeline":
         """Build a Pipeline by running Layer 1 ML prediction on a SMILES."""
         from charon.core.molecule import Molecule
@@ -115,6 +117,8 @@ class Pipeline:
             duration_h=duration_h,
             infusion_duration_h=infusion_duration_h,
             liver_model=liver_model,
+            dose_projection=dose_projection,
+            uncertainty=uncertainty,
         )
 
     def _run_uncertainty(self):
