@@ -15,6 +15,7 @@ from __future__ import annotations
 import math
 import sys
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
 
@@ -23,12 +24,15 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
+REPORTS_DIR = REPO_ROOT / "validation" / "reports"
+
 from charon import Pipeline  # noqa: E402
 from charon.core.schema import (  # noqa: E402
     CompoundConfig,
     CompoundProperties,
 )
 from validation.benchmarks.metrics import aafe, fold_error, within_n_fold  # noqa: E402
+from validation.benchmarks.report_writer import emit_report  # noqa: E402
 
 
 DEFAULT_PANEL_PATH = (
@@ -317,6 +321,89 @@ def _print_summary(summary: PanelSummary, title: str) -> None:
     print(f"  strict gate failures: {summary.strict_failures}")
 
 
+def _build_report_payload(
+    summaries: dict[str, PanelSummary],
+    rows: dict[str, list[PanelRow]],
+) -> dict:
+    """Build a report_writer-compatible payload from "with_override" results."""
+    s = summaries["with_override"]
+    date_utc = datetime.now(tz=timezone.utc).isoformat()
+
+    summary_list = [
+        {
+            "metric": "CL (L/h)",
+            "AAFE": s.aafe["cl_L_h"],
+            "within_2_fold": s.within_2_fold["cl_L_h"],
+            "within_3_fold": s.within_3_fold["cl_L_h"],
+        },
+        {
+            "metric": "Vss (L)",
+            "AAFE": s.aafe["vss_L"],
+            "within_2_fold": s.within_2_fold["vss_L"],
+            "within_3_fold": s.within_3_fold["vss_L"],
+        },
+        {
+            "metric": "t_half (h)",
+            "AAFE": s.aafe["t_half_h"],
+            "within_2_fold": s.within_2_fold["t_half_h"],
+            "within_3_fold": s.within_3_fold["t_half_h"],
+        },
+    ]
+
+    targets = [
+        {
+            "metric": "CL (L/h)",
+            "target": "AAFE < 2.5",
+            "met": s.aafe["cl_L_h"] < 2.5,
+        },
+        {
+            "metric": "Vss (L)",
+            "target": "AAFE < 3.0",
+            "met": s.aafe["vss_L"] < 3.0,
+        },
+    ]
+
+    result_rows = []
+    for r in rows["with_override"]:
+        result_rows.append(
+            {
+                "compound": r.key,
+                "cl_pred": r.predicted["cl_L_h"],
+                "cl_obs": r.observed["cl_L_h"],
+                "cl_fold": r.fold["cl_L_h"],
+                "cl_pass_2x": r.pass_2_fold["cl_L_h"],
+                "vss_pred": r.predicted["vss_L"],
+                "vss_obs": r.observed["vss_L"],
+                "vss_fold": r.fold["vss_L"],
+                "vss_pass_2x": r.pass_2_fold["vss_L"],
+                "t_half_pred": r.predicted["t_half_h"],
+                "t_half_obs": r.observed["t_half_h"],
+                "t_half_fold": r.fold["t_half_h"],
+                "t_half_pass_2x": r.pass_2_fold["t_half_h"],
+                "strict_target": r.strict_targets,
+            }
+        )
+
+    notes = [
+        f"Panel: n={s.n} compounds (Obach 1999 Tier-1)",
+        "Mode: R&R + empirical Kp overrides (with_override)",
+        f"Strict-gate failures: {s.strict_failures}",
+        "AAFE targets: CL < 2.5, Vss < 3.0 (ARCHITECTURE.md §8)",
+        "BDF solver (scipy.integrate.solve_ivp, method='BDF')",
+        "fu_p applied only via fu_b = fu_p/BP in liver model (no double-application)",
+    ]
+
+    return {
+        "title": "Charon Layer 2 Human PBPK Benchmark — Obach 1999 Tier-1 Panel",
+        "panel": "obach_1999_tier1",
+        "date_utc": date_utc,
+        "summary": summary_list,
+        "targets": targets,
+        "rows": result_rows,
+        "notes": notes,
+    }
+
+
 def main(panel_path: Path | None = None) -> int:
     panel_path = panel_path or DEFAULT_PANEL_PATH
     summaries, rows = run_benchmark(panel_path)
@@ -347,6 +434,9 @@ def main(panel_path: Path | None = None) -> int:
     else:
         print(f"{strict_failures} strict-targets compound(s) FAILED — exit 1")
     print("=" * 100)
+
+    payload = _build_report_payload(summaries, rows)
+    emit_report(payload, stem=REPORTS_DIR / "layer2_human_pk")
 
     return 0 if strict_failures == 0 else 1
 
