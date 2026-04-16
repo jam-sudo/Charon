@@ -1,0 +1,16 @@
+{
+  "drug": "diclofenac",
+  "smiles": "OC(=O)Cc1ccccc1Nc1c(Cl)cccc1Cl",
+  "charon_version": "0.1.0",
+  "primary_metric": {
+    "name": "mrsd_mg",
+    "value": 5.864864864864865
+  },
+  "secondary_metrics": {
+    "cmax_ug_L": 36.5583,
+    "auc_ug_h_L": 14.6052,
+    "t_half_h": 115.3974
+  },
+  "generated_utc": "2026-04-16T10:29:28.097051+00:00",
+  "caveat": null
+}

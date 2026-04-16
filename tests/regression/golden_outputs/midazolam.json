@@ -1,0 +1,16 @@
+{
+  "drug": "midazolam",
+  "smiles": "Cc1ncc2n1-c1ccc(Cl)cc1C(c1ccccc1F)=NC2",
+  "charon_version": "0.1.0",
+  "primary_metric": {
+    "name": "mrsd_mg",
+    "value": 2.345945945945946
+  },
+  "secondary_metrics": {
+    "cmax_ug_L": 2.4054,
+    "auc_ug_h_L": 1.113,
+    "t_half_h": 127.8266
+  },
+  "generated_utc": "2026-04-16T10:29:28.018184+00:00",
+  "caveat": null
+}

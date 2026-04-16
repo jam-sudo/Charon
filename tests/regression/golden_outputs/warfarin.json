@@ -1,0 +1,16 @@
+{
+  "drug": "warfarin",
+  "smiles": "CC(=O)CC(c1ccccc1)c1c(O)c2ccccc2oc1=O",
+  "charon_version": "0.1.0",
+  "primary_metric": {
+    "name": "mrsd_mg",
+    "value": 0.5864864864864865
+  },
+  "secondary_metrics": {
+    "cmax_ug_L": 2.4218,
+    "auc_ug_h_L": 1.2125,
+    "t_half_h": 136.4546
+  },
+  "generated_utc": "2026-04-16T10:29:28.062014+00:00",
+  "caveat": null
+}
