@@ -1,0 +1,52 @@
+name: dextromethorphan
+smiles: "COc1ccc2c(c1)[C@]13CCCC[C@@H]1[C@H](C2)N(C)CC3"
+molecular_weight: 271.40
+source: literature
+properties:
+  physicochemical:
+    logp:
+      value: 3.0
+      source: literature
+      method: "Literature consensus (range 2.7-3.4); ChEMBL ALogP=3.38 (calculated)"
+    pka_base:
+      value: 8.3
+      source: literature
+      method: "Literature (tertiary amine morphinan)"
+    compound_type: base
+  binding:
+    fu_p:
+      value: 0.68
+      source: literature
+      unit: fraction
+      method: "Bolaji 1993 Br J Clin Pharmacol 36:131 (equilibrium dialysis)"
+    fu_inc:
+      value: 0.80
+      source: literature
+      unit: fraction
+      method: "Austin 2002 estimate from logP~3.0"
+    bp_ratio:
+      value: 1.04
+      source: literature
+      unit: ratio
+      method: "DrugBank DB00514"
+  metabolism:
+    clint_uL_min_mg:
+      value: 85.0
+      source: literature
+      unit: uL/min/mg
+      method: "Literature HLM CLint (verify against Obach 1999 or Houston group)"
+    fm_cyp2d6: 0.85
+    fm_cyp3a4: 0.15
+  renal:
+    clrenal_L_h:
+      value: 0.0
+      source: literature
+      unit: L/h
+      method: "negligible urinary excretion of parent"
+observed_iv:
+  dose_mg: 30.0
+  cl_L_h: 50.0
+  vss_L: 250.0
+  t_half_h: 3.5
+  source: "Schadel 1995 + Bolaji 1993 (EM population)"
+  phenotype_caveat: "EM population; CYP2D6 PMs ~10x lower CL (not modelled)"
