@@ -1,7 +1,7 @@
 name: dextromethorphan
 smiles: "COc1ccc2c(c1)[C@]13CCCC[C@@H]1[C@H](C2)N(C)CC3"
 molecular_weight: 271.40
-source: literature
+source: experimental
 properties:
   physicochemical:
     logp:
