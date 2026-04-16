@@ -35,7 +35,7 @@ class TestBenchmarkMain:
         summaries, rows = run_benchmark(panel_path)
         assert "no_override" in summaries
         assert "with_override" in summaries
-        assert summaries["no_override"].n == 10
-        assert summaries["with_override"].n == 10
-        assert len(rows["no_override"]) == 10
-        assert len(rows["with_override"]) == 10
+        assert summaries["no_override"].n == 12
+        assert summaries["with_override"].n == 12
+        assert len(rows["no_override"]) == 12
+        assert len(rows["with_override"]) == 12
