@@ -97,3 +97,25 @@ compounds:
     obach_table_row: 47
     strict_targets: false
     notes: "Base, CYP3A4, ER≈0.95 engine stress test."
+
+  - key: omeprazole
+    compound_file: compounds/omeprazole.yaml
+    route: iv_bolus
+    dose_mg: 40.0
+    duration_h: 24.0
+    observed: {cl_L_h: 34.2, vss_L: 24.5, t_half_h: 0.9}
+    strict_targets: false
+    notes: >
+      Ampholyte, CYP2C19 dominant. Not in Obach 1999; supplementary
+      literature source. EM population means; PM phenotype not modelled.
+
+  - key: dextromethorphan
+    compound_file: compounds/dextromethorphan.yaml
+    route: iv_bolus
+    dose_mg: 30.0
+    duration_h: 48.0
+    observed: {cl_L_h: 50.0, vss_L: 250.0, t_half_h: 3.5}
+    strict_targets: false
+    notes: >
+      Basic, lipophilic, CYP2D6 dominant. Not in Obach 1999. High Vss,
+      phenotype-sensitive. EM population means; PM phenotype not modelled.
