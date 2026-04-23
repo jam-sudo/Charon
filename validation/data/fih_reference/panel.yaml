@@ -19,6 +19,14 @@ panel:
   name: charon_sprint7_fih
   version: 1
   date_utc: "2026-04-23"
+  route_note: |
+    All compounds run as iv_bolus because the reused tier1_obach compound
+    YAMLs lack Papp/Peff (absorption data). Reference doses represent
+    clinical daily oral amounts; Tier B (sanity floor) compares
+    IV-predicted MRSD to oral approved-start dose, which is conservative
+    (IV MRSD <= oral dose implies oral MRSD would also satisfy the floor
+    under any F <= 1). Tier A fold-errors inherit a 1/F bias factor and
+    are therefore approximate.
   compounds:
     # --- Tier A: gold ---
     - name: midazolam
@@ -33,7 +41,7 @@ panel:
     - name: warfarin
       tier: gold
       reference_fih_mg: 2.0
-      route: oral
+      route: iv_bolus
       target_ceff_nM: 3200.0
       source: "FDA label (Coumadin), initial dose 2-5 mg"
       source_type: label_start
@@ -42,7 +50,7 @@ panel:
     - name: propranolol
       tier: gold
       reference_fih_mg: 10.0
-      route: oral
+      route: iv_bolus
       target_ceff_nM: 80.0
       source: "NDA 16-418 (Inderal), approved starting dose"
       source_type: label_start
@@ -51,7 +59,7 @@ panel:
     - name: verapamil
       tier: gold
       reference_fih_mg: 40.0
-      route: oral
+      route: iv_bolus
       target_ceff_nM: 220.0
       source: "NDA 18-817 (Calan), lowest approved PO dose"
       source_type: label_start
@@ -60,7 +68,7 @@ panel:
     - name: omeprazole
       tier: gold
       reference_fih_mg: 20.0
-      route: oral
+      route: iv_bolus
       target_ceff_nM: 1500.0
       source: "NDA 19-810 (Prilosec), standard 20 mg PO OD"
       source_type: label_start
@@ -71,35 +79,35 @@ panel:
     - name: theophylline
       tier: sanity_floor
       approved_starting_dose_mg: 100.0
-      route: oral
+      route: iv_bolus
       target_ceff_nM: 55000.0
       source: "FDA label, initial oral 100-200 mg; therapeutic Cp ~10 μg/mL, MW 180"
 
     - name: antipyrine
       tier: sanity_floor
       approved_starting_dose_mg: 500.0
-      route: oral
+      route: iv_bolus
       target_ceff_nM: 50000.0
       source: "Historical analgesic; commonly 500 mg PO adult; Cp ~9 μg/mL, MW 188"
 
     - name: caffeine
       tier: sanity_floor
       approved_starting_dose_mg: 100.0
-      route: oral
+      route: iv_bolus
       target_ceff_nM: 25000.0
       source: "OTC monograph, 100-200 mg typical; Cp ~5 μg/mL, MW 194"
 
     - name: warfarin
       tier: sanity_floor
       approved_starting_dose_mg: 5.0
-      route: oral
+      route: iv_bolus
       target_ceff_nM: 3200.0
       source: "FDA label, upper bound of starting range"
 
     - name: diclofenac
       tier: sanity_floor
       approved_starting_dose_mg: 50.0
-      route: oral
+      route: iv_bolus
       target_ceff_nM: 5000.0
       source: "FDA label (Voltaren), 50 mg PO TID; Cp ~1.5 μg/mL, MW 296"
 
@@ -113,41 +121,41 @@ panel:
     - name: propranolol
       tier: sanity_floor
       approved_starting_dose_mg: 40.0
-      route: oral
+      route: iv_bolus
       target_ceff_nM: 80.0
       source: "FDA label, upper initial PO"
 
     - name: diazepam
       tier: sanity_floor
       approved_starting_dose_mg: 2.0
-      route: oral
+      route: iv_bolus
       target_ceff_nM: 1800.0
       source: "FDA label (Valium), 2-10 mg initial; therapeutic Cp ~500 ng/mL, MW 285"
 
     - name: metoprolol
       tier: sanity_floor
       approved_starting_dose_mg: 50.0
-      route: oral
+      route: iv_bolus
       target_ceff_nM: 380.0
       source: "FDA label (Lopressor), 50 mg PO BID initial; Cp ~100 ng/mL, MW 267"
 
     - name: verapamil
       tier: sanity_floor
       approved_starting_dose_mg: 80.0
-      route: oral
+      route: iv_bolus
       target_ceff_nM: 220.0
       source: "FDA label (Calan), 80 mg PO TID standard"
 
     - name: omeprazole
       tier: sanity_floor
       approved_starting_dose_mg: 20.0
-      route: oral
+      route: iv_bolus
       target_ceff_nM: 1500.0
       source: "FDA label (Prilosec), 20 mg PO OD standard"
 
     - name: dextromethorphan
       tier: sanity_floor
       approved_starting_dose_mg: 30.0
-      route: oral
+      route: iv_bolus
       target_ceff_nM: 30.0
       source: "OTC antitussive, 30 mg PO q6-8h; Cp ~8 ng/mL, MW 271"
