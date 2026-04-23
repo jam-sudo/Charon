@@ -11,6 +11,6 @@
     "auc_ug_h_L": 1.5056,
     "t_half_h": 50.3032
   },
-  "generated_utc": "2026-04-16T10:29:28.195686+00:00",
+  "generated_utc": "2026-04-23T07:46:10.193173+00:00",
   "caveat": "phenotype_caveat: ML predictions for this compound may be less reliable due to metabolic phenotype complexity (e.g. CYP2D6 polymorphism)"
 }
