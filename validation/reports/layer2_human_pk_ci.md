@@ -1,6 +1,6 @@
 # Charon Layer 2 Human PBPK Benchmark — Obach 1999 Tier-1 Panel
 
-**Generated:** 2026-04-23T08:00:49.133431+00:00
+**Generated:** 2026-04-23T08:00:50.156242+00:00
 **Panel:** obach_1999_tier1
 
 ## Summary
@@ -43,3 +43,5 @@
 - AAFE targets: CL < 2.5, Vss < 3.0 (ARCHITECTURE.md §8)
 - BDF solver (scipy.integrate.solve_ivp, method='BDF')
 - fu_p applied only via fu_b = fu_p/BP in liver model (no double-application)
+- Monte-Carlo over conformal CIs: N=100 samples per compound, 0/12 rows had ml_ensemble-sourced fu_p/CLint with conformal CIs.
+- fu_p and CLint sampled log-normal from conformal 90% CI (sigma_log = (log10(upper) - log10(lower)) / (2 * 1.645)).
