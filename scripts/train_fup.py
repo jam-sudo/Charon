@@ -34,6 +34,7 @@ from _train_common import (  # noqa: E402
     inchikey14,
     load_validation_keys,
     murcko_scaffold,
+    persist_oof_residuals,
     scaffold_oof_predictions,
     update_model_metadata,
 )
@@ -146,12 +147,10 @@ def main() -> None:
     oof_log = scaffold_oof_predictions(make_fup_model, X, y_log, groups, n_splits=5)
     oof_linear = np.clip(10.0 ** oof_log, 0.001, 1.0)
 
-    residuals = np.abs(oof_log - y_log)
-    residuals_path = MODELS_DIR / "xgboost_fup_oof_residuals.npy"
-    np.save(residuals_path, residuals)
-    log.info("Saved %d OOF residuals to %s", residuals.size, residuals_path)
-    import hashlib as _hashlib
-    residuals_sha = _hashlib.sha256(residuals_path.read_bytes()).hexdigest()
+    residuals_name, residuals_sha = persist_oof_residuals(
+        "xgboost_fup", oof_log, y_log
+    )
+    log.info("Saved OOF residuals to models/%s", residuals_name)
 
     r2, mae, aafe, pct2, pct3 = compute_metrics(
         y_true_target=y_log,
@@ -186,7 +185,7 @@ def main() -> None:
             "excluded from training."
         ),
         extras={
-            "oof_residuals_path": "xgboost_fup_oof_residuals.npy",
+            "oof_residuals_path": residuals_name,
             "oof_residuals_sha256": residuals_sha,
         },
     )

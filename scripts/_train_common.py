@@ -7,6 +7,7 @@ loading the validation holdout so we never train on calibration compounds.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 from dataclasses import dataclass, field
@@ -205,6 +206,23 @@ def scaffold_oof_predictions(
 # ---------------------------------------------------------------------------
 # Metadata persistence
 # ---------------------------------------------------------------------------
+
+
+def persist_oof_residuals(
+    model_stem: str,
+    oof_log: np.ndarray,
+    y_log: np.ndarray,
+) -> tuple[str, str]:
+    """Save scaffold-CV |log10(pred/obs)| residuals and return (filename, sha256 hex).
+
+    Filename is ``{model_stem}_oof_residuals.npy`` relative to MODELS_DIR.
+    Consumed by ``ConformalPredictor.calibrate_from_oof`` for CLint/fup CIs.
+    """
+    residuals = np.abs(oof_log - y_log)
+    path = MODELS_DIR / f"{model_stem}_oof_residuals.npy"
+    np.save(path, residuals)
+    sha = hashlib.sha256(path.read_bytes()).hexdigest()
+    return path.name, sha
 
 
 def update_model_metadata(report: CVReport) -> None:
