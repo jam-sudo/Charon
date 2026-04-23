@@ -69,6 +69,7 @@ _PROPERTY_BOUNDS: dict[str, tuple[float, float]] = {
 _DEFAULT_CACHE_PATH = Path(__file__).resolve().parents[3] / "models" / "conformal_cache.json"
 _DEFAULT_REFERENCE_CSV = Path(__file__).resolve().parents[3] / "data" / "validation" / "adme_reference.csv"
 _DEFAULT_CLINT_OOF = Path(__file__).resolve().parents[3] / "models" / "xgboost_clint_oof_residuals.npy"
+_DEFAULT_FUP_MODEL = Path(__file__).resolve().parents[3] / "models" / "xgboost_fup.json"
 _CACHE_SCHEMA_VERSION = 1
 
 # Module-level singleton wired through by Task 3 (`predict_properties`).
@@ -305,28 +306,46 @@ class ConformalPredictor:
         cache_path: Path | str | None = None,
         reference_csv: Path | str | None = None,
         clint_oof_path: Path | str | None = None,
+        force_recalibrate: bool = False,
     ) -> "ConformalPredictor":
         """Return a calibrated predictor, using a JSON cache when valid.
 
-        On cache hit (schema version matches, every source hash matches),
-        :class:`CoverageReport` objects are reconstructed from the cache
-        and no calibration runs. On miss/mismatch/corrupt cache, the
-        predictor runs :meth:`calibrate` (fup) and
+        On cache hit (schema version matches, every source hash matches,
+        and coverage target matches), :class:`CoverageReport` objects are
+        reconstructed from the cache and no calibration runs. On
+        miss/mismatch/corrupt cache or if ``force_recalibrate`` is True,
+        the predictor runs :meth:`calibrate` (fup) and
         :meth:`calibrate_from_oof` (clint_hepatocyte), then writes the
         cache atomically.
+
+        If the CLint OOF residuals file is missing, a warning is logged
+        and the predictor is returned calibrated for fup only (cache is
+        still written without a clint_hepatocyte entry). The fup
+        reference CSV is required — its absence raises
+        ``FileNotFoundError``.
         """
         cache = Path(cache_path) if cache_path is not None else _DEFAULT_CACHE_PATH
         ref_csv = Path(reference_csv) if reference_csv is not None else _DEFAULT_REFERENCE_CSV
         oof_path = Path(clint_oof_path) if clint_oof_path is not None else _DEFAULT_CLINT_OOF
+        fup_model = _DEFAULT_FUP_MODEL
 
-        source_hashes = {
-            "adme_reference.csv": _sha256(ref_csv),
-            "xgboost_clint_oof_residuals.npy": _sha256(oof_path),
+        if not ref_csv.exists():
+            raise FileNotFoundError(
+                f"fup calibration reference CSV not found: {ref_csv}"
+            )
+
+        # Only hash files that actually exist — missing optional sources
+        # are omitted from the manifest rather than raising.
+        sources = {
+            "adme_reference.csv": ref_csv,
+            "xgboost_fup.json": fup_model,
+            "xgboost_clint_oof_residuals.npy": oof_path,
         }
+        source_hashes = {name: _sha256(p) for name, p in sources.items() if p.exists()}
 
         predictor = cls(ref_csv)
 
-        if cache.exists():
+        if not force_recalibrate and cache.exists():
             try:
                 raw = _json.loads(cache.read_text())
                 if (
@@ -334,22 +353,30 @@ class ConformalPredictor:
                     and raw.get("source_hashes") == source_hashes
                     and isinstance(raw.get("reports"), dict)
                 ):
-                    for prop, rpt in raw["reports"].items():
-                        predictor._reports[prop] = CoverageReport(
-                            property_name=prop,
-                            n_samples=int(rpt["n_samples"]),
-                            quantile_log10=float(rpt["quantile_log10"]),
-                            factor=float(rpt["factor"]),
-                            empirical_coverage=float(rpt["empirical_coverage"]),
-                            median_fold_error=float(rpt["median_fold_error"]),
-                            mean_fold_error=float(rpt["mean_fold_error"]),
-                            warning=rpt.get("warning"),
+                    cached_coverage = raw.get("coverage_target")
+                    if cached_coverage != predictor._coverage:
+                        logger.warning(
+                            "Conformal cache coverage_target=%s != requested %s; recalibrating",
+                            cached_coverage, predictor._coverage,
                         )
-                    logger.info("Loaded conformal cache from %s", cache)
-                    return predictor
-                logger.info(
-                    "Conformal cache stale (schema or source hashes changed); recalibrating"
-                )
+                    else:
+                        for prop, rpt in raw["reports"].items():
+                            predictor._reports[prop] = CoverageReport(
+                                property_name=prop,
+                                n_samples=int(rpt["n_samples"]),
+                                quantile_log10=float(rpt["quantile_log10"]),
+                                factor=float(rpt["factor"]),
+                                empirical_coverage=float(rpt["empirical_coverage"]),
+                                median_fold_error=float(rpt["median_fold_error"]),
+                                mean_fold_error=float(rpt["mean_fold_error"]),
+                                warning=rpt.get("warning"),
+                            )
+                        logger.info("Loaded conformal cache from %s", cache)
+                        return predictor
+                else:
+                    logger.info(
+                        "Conformal cache stale (schema or source hashes changed); recalibrating"
+                    )
             except (OSError, ValueError, KeyError, TypeError) as exc:
                 logger.warning(
                     "Conformal cache at %s unreadable (%s); falling back to full calibration",
@@ -360,8 +387,15 @@ class ConformalPredictor:
         # Full calibration path.
         admet = ADMETPredictor()
         predictor.calibrate(admet)
-        oof_residuals = np.load(oof_path)
-        predictor.calibrate_from_oof("clint_hepatocyte", oof_residuals)
+        if oof_path.exists():
+            oof_residuals = np.load(oof_path)
+            predictor.calibrate_from_oof("clint_hepatocyte", oof_residuals)
+        else:
+            logger.warning(
+                "CLint OOF residuals missing at %s; clint_hepatocyte will not be calibrated. "
+                "Run scripts/train_clint.py to generate them.",
+                oof_path,
+            )
         predictor._save_cache(cache, source_hashes)
         return predictor
 
@@ -371,6 +405,7 @@ class ConformalPredictor:
             "schema_version": _CACHE_SCHEMA_VERSION,
             "generated_utc": datetime.now(timezone.utc).isoformat(),
             "source_hashes": dict(source_hashes),
+            "coverage_target": self._coverage,
             "reports": {
                 prop: {
                     "n_samples": r.n_samples,

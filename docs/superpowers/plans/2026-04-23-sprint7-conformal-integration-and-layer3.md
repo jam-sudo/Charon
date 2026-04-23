@@ -359,7 +359,7 @@ Inside `class ConformalPredictor`, add classmethod:
         cls,
         cache_path: Path | None = None,
         reference_csv: Path | None = None,
-        clint_oof: Path | None = None,
+        clint_oof_path: Path | None = None,
         force_recalibrate: bool = False,
     ) -> "ConformalPredictor":
         """Return a calibrated predictor, using an on-disk cache when valid.
@@ -374,17 +374,17 @@ Inside `class ConformalPredictor`, add classmethod:
                 ``models/conformal_cache.json``.
             reference_csv: Calibration CSV for fup. Defaults to repo's
                 ``data/validation/adme_reference.csv``.
-            clint_oof: ``.npy`` file of |log10(pred/obs)| residuals
+            clint_oof_path: ``.npy`` file of |log10(pred/obs)| residuals
                 produced by ``scripts/train_clint.py``.
             force_recalibrate: If True, ignore any existing cache.
         """
         cache_path = Path(cache_path) if cache_path else _DEFAULT_CACHE_PATH
         reference_csv = Path(reference_csv) if reference_csv else _DEFAULT_REFERENCE_CSV
-        clint_oof = Path(clint_oof) if clint_oof else _DEFAULT_CLINT_OOF
+        clint_oof_path = Path(clint_oof_path) if clint_oof_path else _DEFAULT_CLINT_OOF
 
         sources = {
             "adme_reference.csv": reference_csv,
-            "xgboost_clint_oof_residuals.npy": clint_oof,
+            "xgboost_clint_oof_residuals.npy": clint_oof_path,
         }
         current_hashes = {
             name: _sha256(p) for name, p in sources.items() if p.exists()
@@ -423,14 +423,14 @@ Inside `class ConformalPredictor`, add classmethod:
         cp = cls(calibration_data=reference_csv)
         predictor = ADMETPredictor()
         cp.calibrate(predictor)
-        if clint_oof.exists():
-            residuals = np.load(clint_oof)
+        if clint_oof_path.exists():
+            residuals = np.load(clint_oof_path)
             cp.calibrate_from_oof("clint_hepatocyte", residuals)
         else:
             logger.warning(
                 "CLint OOF residuals missing at %s; clint_hepatocyte will not be calibrated. "
                 "Run scripts/train_clint.py to generate them.",
-                clint_oof,
+                clint_oof_path,
             )
         cp._save_cache(cache_path, current_hashes)
         return cp
