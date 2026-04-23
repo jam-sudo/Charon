@@ -42,6 +42,7 @@ from _train_common import (  # noqa: E402
     inchikey14,
     load_validation_keys,
     murcko_scaffold,
+    persist_oof_residuals,
     scaffold_oof_predictions,
     update_model_metadata,
 )
@@ -147,6 +148,12 @@ def main() -> None:
     oof_log = scaffold_oof_predictions(make_clint_model, X, y_log, groups, n_splits=5)
     oof_linear = np.clip(10.0 ** oof_log, CLINT_MIN, CLINT_MAX)
 
+    # Persist |log10(pred/obs)| residuals for ConformalPredictor.calibrate_from_oof
+    residuals_name, residuals_sha = persist_oof_residuals(
+        "xgboost_clint", oof_log, y_log
+    )
+    log.info("Saved OOF residuals to models/%s", residuals_name)
+
     r2, mae, aafe, pct2, pct3 = compute_metrics(
         y_true_target=y_log,
         y_pred_target=oof_log,
@@ -179,6 +186,10 @@ def main() -> None:
             "[0.1, 1000]. Scaffold 5-fold GroupKFold. Sources biogen_fang "
             "and tdc_mic explicitly excluded (unit mismatch)."
         ),
+        extras={
+            "oof_residuals_path": residuals_name,
+            "oof_residuals_sha256": residuals_sha,
+        },
     )
     update_model_metadata(report)
 

@@ -49,15 +49,35 @@ from charon.core.schema import (
 )
 from charon.predict.admet_ensemble import ADMEPrediction, ADMETPredictor
 from charon.predict.bp_ratio import predict_bp_ratio
-from charon.predict.conformal import ConformalPredictor, CoverageReport
+from charon.predict.conformal import (
+    ConformalPredictor,
+    CoverageReport,
+    get_default_conformal,
+)
 from charon.predict.features import compute_features
 from charon.predict.fu_inc import predict_fu_inc
 from charon.predict.pka import PKaResult, predict_pka
 from charon.predict.renal import estimate_renal_clearance
 
+
+class _ConformalOff:
+    """Sentinel value: explicitly disable default CI attachment.
+
+    Passed as ``conformal=CONFORMAL_OFF`` to :func:`predict_properties`
+    to opt out of the module-level default predictor.
+    """
+
+    def __repr__(self) -> str:  # pragma: no cover - trivial
+        return "CONFORMAL_OFF"
+
+
+CONFORMAL_OFF = _ConformalOff()
+
+
 __all__ = [
     "ADMEPrediction",
     "ADMETPredictor",
+    "CONFORMAL_OFF",
     "CompoundProperties",
     "ConformalPredictor",
     "CoverageReport",
@@ -98,7 +118,7 @@ def _predicted(
 def predict_properties(
     smiles: str,
     predictor: ADMETPredictor | None = None,
-    conformal: ConformalPredictor | None = None,
+    conformal: "ConformalPredictor | _ConformalOff | None" = None,
 ) -> CompoundProperties:
     """Run the full Layer 1 prediction pipeline on a SMILES.
 
@@ -117,8 +137,15 @@ def predict_properties(
         smiles: Input SMILES (canonical or raw).
         predictor: Optional pre-initialised :class:`ADMETPredictor`.
             Instantiated on demand when ``None``.
-        conformal: Optional calibrated :class:`ConformalPredictor`. When
-            ``None`` the returned properties have no CI attached.
+        conformal: Controls CI attachment.
+
+            * ``None`` (default): use the module-level default
+              :class:`ConformalPredictor` from
+              :func:`get_default_conformal`. If its calibration data are
+              missing, a warning is logged and CIs are omitted.
+            * :data:`CONFORMAL_OFF`: explicitly disable CI attachment
+              (leaves ``ci_90_lower`` / ``ci_90_upper`` as ``None``).
+            * A user-supplied :class:`ConformalPredictor`: used as-is.
 
     Returns:
         Fully populated :class:`CompoundProperties`.
@@ -148,16 +175,30 @@ def predict_properties(
     # 6. Renal clearance (filtration only by default).
     cl_renal = estimate_renal_clearance(fu_p=adme.fup)
 
-    # 7. Conformal intervals (if available).
+    # 7. Conformal intervals (default = module singleton; CONFORMAL_OFF = disabled).
     fup_lo: float | None = None
     fup_hi: float | None = None
     clint_lo: float | None = None
     clint_hi: float | None = None
-    if conformal is not None:
-        if conformal.is_calibrated("fup"):
-            fup_lo, fup_hi = conformal.get_interval("fup", adme.fup)
-        if conformal.is_calibrated("clint_hepatocyte"):
-            clint_lo, clint_hi = conformal.get_interval(
+    if isinstance(conformal, _ConformalOff):
+        active: ConformalPredictor | None = None
+    elif conformal is None:
+        try:
+            active = get_default_conformal()
+        except (FileNotFoundError, OSError) as exc:
+            import logging as _logging
+            _logging.getLogger(__name__).warning(
+                "Default conformal unavailable (%s); continuing without CI", exc
+            )
+            active = None
+    else:
+        active = conformal
+
+    if active is not None:
+        if active.is_calibrated("fup"):
+            fup_lo, fup_hi = active.get_interval("fup", adme.fup)
+        if active.is_calibrated("clint_hepatocyte"):
+            clint_lo, clint_hi = active.get_interval(
                 "clint_hepatocyte", adme.clint_hepatocyte
             )
 

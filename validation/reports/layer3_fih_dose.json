@@ -1,0 +1,196 @@
+{
+  "title": "Charon Layer 3 FIH Dose Benchmark",
+  "panel": "charon_sprint7_fih",
+  "date_utc": "2026-04-23T08:09:12.581482+00:00",
+  "summary": {
+    "gold_n": 5,
+    "gold_within_3x": 3,
+    "gold_within_3x_fraction": 0.6,
+    "gold_within_10x": 4,
+    "sanity_n": 12,
+    "sanity_pass_count": 12,
+    "sanity_pass_fraction": 1.0,
+    "sanity_failures": "-"
+  },
+  "rows": [],
+  "extra_sections": {
+    "Gold (Tier A) \u2014 fold-error vs reference FIH": [
+      {
+        "compound": "midazolam",
+        "route": "iv_bolus",
+        "mrsd_pred_mg": 0.5784245583101024,
+        "limiting_method": "pad",
+        "reference_fih_mg": 1.0,
+        "source_type": "briefing",
+        "fold_error": 1.7288339259341827,
+        "within_3x": true,
+        "within_10x": true,
+        "source": "NDA 20-942 briefing, single-dose IV Phase 1"
+      },
+      {
+        "compound": "warfarin",
+        "route": "iv_bolus",
+        "mrsd_pred_mg": 1.9141581676189816,
+        "limiting_method": "pad",
+        "reference_fih_mg": 2.0,
+        "source_type": "label_start",
+        "fold_error": 1.0448457362788348,
+        "within_3x": true,
+        "within_10x": true,
+        "source": "FDA label (Coumadin), initial dose 2-5 mg"
+      },
+      {
+        "compound": "propranolol",
+        "route": "iv_bolus",
+        "mrsd_pred_mg": 0.27545902321806776,
+        "limiting_method": "pad",
+        "reference_fih_mg": 10.0,
+        "source_type": "label_start",
+        "fold_error": 36.30304022418419,
+        "within_3x": false,
+        "within_10x": false,
+        "source": "NDA 16-418 (Inderal), approved starting dose"
+      },
+      {
+        "compound": "verapamil",
+        "route": "iv_bolus",
+        "mrsd_pred_mg": 4.914235638457872,
+        "limiting_method": "pad",
+        "reference_fih_mg": 40.0,
+        "source_type": "label_start",
+        "fold_error": 8.139617825194954,
+        "within_3x": false,
+        "within_10x": true,
+        "source": "NDA 18-817 (Calan), lowest approved PO dose"
+      },
+      {
+        "compound": "omeprazole",
+        "route": "iv_bolus",
+        "mrsd_pred_mg": 13.359816040800473,
+        "limiting_method": "pad",
+        "reference_fih_mg": 20.0,
+        "source_type": "label_start",
+        "fold_error": 1.4970266011837743,
+        "within_3x": true,
+        "within_10x": true,
+        "source": "NDA 19-810 (Prilosec), standard 20 mg PO OD"
+      }
+    ],
+    "Sanity floor (Tier B) \u2014 MRSD <= approved starting dose": [
+      {
+        "compound": "theophylline",
+        "route": "iv_bolus",
+        "mrsd_pred_mg": 85.2121561715791,
+        "limiting_method": "pad",
+        "approved_starting_dose_mg": 100.0,
+        "pass_floor": true,
+        "source": "FDA label, initial oral 100-200 mg; therapeutic Cp ~10 \u03bcg/mL, MW 180"
+      },
+      {
+        "compound": "antipyrine",
+        "route": "iv_bolus",
+        "mrsd_pred_mg": 63.56593220150627,
+        "limiting_method": "pad",
+        "approved_starting_dose_mg": 500.0,
+        "pass_floor": true,
+        "source": "Historical analgesic; commonly 500 mg PO adult; Cp ~9 \u03bcg/mL, MW 188"
+      },
+      {
+        "compound": "caffeine",
+        "route": "iv_bolus",
+        "mrsd_pred_mg": 26.19092802901262,
+        "limiting_method": "pad",
+        "approved_starting_dose_mg": 100.0,
+        "pass_floor": true,
+        "source": "OTC monograph, 100-200 mg typical; Cp ~5 \u03bcg/mL, MW 194"
+      },
+      {
+        "compound": "warfarin",
+        "route": "iv_bolus",
+        "mrsd_pred_mg": 1.9141581676189816,
+        "limiting_method": "pad",
+        "approved_starting_dose_mg": 5.0,
+        "pass_floor": true,
+        "source": "FDA label, upper bound of starting range"
+      },
+      {
+        "compound": "diclofenac",
+        "route": "iv_bolus",
+        "mrsd_pred_mg": 4.2646784101254145,
+        "limiting_method": "pad",
+        "approved_starting_dose_mg": 50.0,
+        "pass_floor": true,
+        "source": "FDA label (Voltaren), 50 mg PO TID; Cp ~1.5 \u03bcg/mL, MW 296"
+      },
+      {
+        "compound": "midazolam",
+        "route": "iv_bolus",
+        "mrsd_pred_mg": 0.5784245583101024,
+        "limiting_method": "pad",
+        "approved_starting_dose_mg": 2.5,
+        "pass_floor": true,
+        "source": "Conservative anaesthetic pre-med IV"
+      },
+      {
+        "compound": "propranolol",
+        "route": "iv_bolus",
+        "mrsd_pred_mg": 0.27545902321806776,
+        "limiting_method": "pad",
+        "approved_starting_dose_mg": 40.0,
+        "pass_floor": true,
+        "source": "FDA label, upper initial PO"
+      },
+      {
+        "compound": "diazepam",
+        "route": "iv_bolus",
+        "mrsd_pred_mg": 0.3260714617306632,
+        "limiting_method": "pad",
+        "approved_starting_dose_mg": 2.0,
+        "pass_floor": true,
+        "source": "FDA label (Valium), 2-10 mg initial; therapeutic Cp ~500 ng/mL, MW 285"
+      },
+      {
+        "compound": "metoprolol",
+        "route": "iv_bolus",
+        "mrsd_pred_mg": 6.894904184705377,
+        "limiting_method": "pad",
+        "approved_starting_dose_mg": 50.0,
+        "pass_floor": true,
+        "source": "FDA label (Lopressor), 50 mg PO BID initial; Cp ~100 ng/mL, MW 267"
+      },
+      {
+        "compound": "verapamil",
+        "route": "iv_bolus",
+        "mrsd_pred_mg": 4.914235638457872,
+        "limiting_method": "pad",
+        "approved_starting_dose_mg": 80.0,
+        "pass_floor": true,
+        "source": "FDA label (Calan), 80 mg PO TID standard"
+      },
+      {
+        "compound": "omeprazole",
+        "route": "iv_bolus",
+        "mrsd_pred_mg": 13.359816040800473,
+        "limiting_method": "pad",
+        "approved_starting_dose_mg": 20.0,
+        "pass_floor": true,
+        "source": "FDA label (Prilosec), 20 mg PO OD standard"
+      },
+      {
+        "compound": "dextromethorphan",
+        "route": "iv_bolus",
+        "mrsd_pred_mg": 0.6790233049888086,
+        "limiting_method": "pad",
+        "approved_starting_dose_mg": 30.0,
+        "pass_floor": true,
+        "source": "OTC antitussive, 30 mg PO q6-8h; Cp ~8 ng/mL, MW 271"
+      }
+    ]
+  },
+  "notes": [
+    "Tier A (gold): fold-error vs published FIH or approved-start dose. Report-only.",
+    "Tier B (sanity_floor): MRSD_pred <= approved_starting_dose_mg. GATED \u2014 any failure blocks release.",
+    "MRSD computed via PAD path (target_ceff_nM) with safety_factor=10.",
+    "Sources: inline per compound in panel.yaml."
+  ]
+}

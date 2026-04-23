@@ -163,6 +163,24 @@ def _render_markdown(payload: dict) -> str:
         lines.append("*(no results)*")
         lines.append("")
 
+    # Extra sections (generic dict[str, list[dict] | dict])
+    for section_title, section_rows in payload.get("extra_sections", {}).items():
+        lines.append(f"## {section_title}")
+        lines.append("")
+        if isinstance(section_rows, list) and section_rows:
+            lines.extend(_render_table(section_rows))
+        elif isinstance(section_rows, dict) and section_rows:
+            flat = []
+            for k, v in section_rows.items():
+                if isinstance(v, dict):
+                    flat.append({"key": k, **v})
+                else:
+                    flat.append({"key": k, "value": v})
+            lines.extend(_render_table(flat))
+        else:
+            lines.append("*(no data)*")
+            lines.append("")
+
     # Excluded section (optional)
     if "excluded" in payload and payload["excluded"]:
         lines.append("## Excluded")

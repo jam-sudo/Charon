@@ -8,6 +8,7 @@ import pytest
 
 from charon.core.schema import CompoundProperties
 from charon.predict import (
+    CONFORMAL_OFF,
     ADMETPredictor,
     ConformalPredictor,
     predict_properties,
@@ -50,8 +51,15 @@ class TestPredictPropertiesBasics:
         assert props.renal.clrenal_L_h is not None
 
     def test_without_conformal_no_ci(self, predictor: ADMETPredictor):
-        """No conformal predictor → fu_p has no CI bounds attached."""
-        props = predict_properties(ASPIRIN, predictor=predictor)
+        """Explicit CONFORMAL_OFF → fu_p has no CI bounds attached.
+
+        (The default for ``conformal=None`` now attaches CIs from the
+        module-level singleton; see
+        ``test_predict_properties_default_conformal.py``.)
+        """
+        props = predict_properties(
+            ASPIRIN, predictor=predictor, conformal=CONFORMAL_OFF
+        )
         fu_p = props.binding.fu_p
         assert fu_p is not None
         assert fu_p.ci_90_lower is None
