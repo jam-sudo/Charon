@@ -147,6 +147,12 @@ def main() -> None:
     oof_log = scaffold_oof_predictions(make_clint_model, X, y_log, groups, n_splits=5)
     oof_linear = np.clip(10.0 ** oof_log, CLINT_MIN, CLINT_MAX)
 
+    # Persist |log10(pred/obs)| residuals for ConformalPredictor.calibrate_from_oof
+    residuals = np.abs(oof_log - y_log)
+    residuals_path = MODELS_DIR / "xgboost_clint_oof_residuals.npy"
+    np.save(residuals_path, residuals)
+    log.info("Saved %d OOF residuals to %s", residuals.size, residuals_path)
+
     r2, mae, aafe, pct2, pct3 = compute_metrics(
         y_true_target=y_log,
         y_pred_target=oof_log,
@@ -162,6 +168,8 @@ def main() -> None:
     final_model.save_model(str(MODEL_OUT))
     log.info("Saved model to %s", MODEL_OUT)
 
+    import hashlib as _hashlib
+    residuals_sha = _hashlib.sha256(residuals_path.read_bytes()).hexdigest()
     report = CVReport(
         model_name="xgboost_clint",
         target="log10(clint_hep_uL_min_10e6_cells)",
@@ -179,6 +187,10 @@ def main() -> None:
             "[0.1, 1000]. Scaffold 5-fold GroupKFold. Sources biogen_fang "
             "and tdc_mic explicitly excluded (unit mismatch)."
         ),
+        extras={
+            "oof_residuals_path": "xgboost_clint_oof_residuals.npy",
+            "oof_residuals_sha256": residuals_sha,
+        },
     )
     update_model_metadata(report)
 

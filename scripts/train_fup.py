@@ -146,6 +146,13 @@ def main() -> None:
     oof_log = scaffold_oof_predictions(make_fup_model, X, y_log, groups, n_splits=5)
     oof_linear = np.clip(10.0 ** oof_log, 0.001, 1.0)
 
+    residuals = np.abs(oof_log - y_log)
+    residuals_path = MODELS_DIR / "xgboost_fup_oof_residuals.npy"
+    np.save(residuals_path, residuals)
+    log.info("Saved %d OOF residuals to %s", residuals.size, residuals_path)
+    import hashlib as _hashlib
+    residuals_sha = _hashlib.sha256(residuals_path.read_bytes()).hexdigest()
+
     r2, mae, aafe, pct2, pct3 = compute_metrics(
         y_true_target=y_log,
         y_pred_target=oof_log,
@@ -178,6 +185,10 @@ def main() -> None:
             "scaffolds. Validation set (adme_reference.csv InChIKey-14) "
             "excluded from training."
         ),
+        extras={
+            "oof_residuals_path": "xgboost_fup_oof_residuals.npy",
+            "oof_residuals_sha256": residuals_sha,
+        },
     )
     update_model_metadata(report)
 
