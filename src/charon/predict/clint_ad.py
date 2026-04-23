@@ -50,7 +50,14 @@ def _morgan_bit_vect(smi: str):
 
 
 def _pack_fps(fps: list) -> np.ndarray:
-    """Pack RDKit ExplicitBitVect list into a uint8 (N, FP_N_BITS//8) array."""
+    """Pack RDKit ExplicitBitVect list into a uint8 (N, FP_N_BITS//8) array.
+
+    Round-trip is bitwise exact because FP_N_BITS=2048 is a multiple of 8
+    (no padding in np.packbits) and every on-bit index survives the
+    pack -> unpack -> SetBitsFromList cycle. Tanimoto over ExplicitBitVect
+    is a function of on-bit sets only, so unpacked similarities equal
+    the originals exactly.
+    """
     buf = np.zeros((len(fps), FP_N_BITS // 8), dtype=np.uint8)
     for i, fp in enumerate(fps):
         arr = np.zeros(FP_N_BITS, dtype=np.uint8)
@@ -60,6 +67,7 @@ def _pack_fps(fps: list) -> np.ndarray:
 
 
 def _unpack_to_bit_vect_list(packed: np.ndarray) -> list:
+    """Inverse of _pack_fps — see that function's docstring for the round-trip guarantee."""
     out = []
     for row in packed:
         bits = np.unpackbits(row)[:FP_N_BITS].astype(np.uint8)
@@ -103,18 +111,31 @@ class ClintLocalAD:
         fps = cls._build_reference_fps(training_csv)
         packed = _pack_fps(fps)
         cache_path.parent.mkdir(parents=True, exist_ok=True)
+        # np.savez auto-appends ``.npz`` if the target does not already end
+        # in that extension, so we pass a stem and let it produce the actual
+        # ``.tmp.npz`` file, which we then atomically rename.
+        tmp_stem = cache_path.parent / (cache_path.name + ".tmp")
         np.savez(
-            cache_path,
+            tmp_stem,
             packed_fps=packed,
             source_hash=np.array(current_hash),
             training_path=np.array(str(training_csv.name)),
         )
+        tmp_written = tmp_stem.with_suffix(tmp_stem.suffix + ".npz")
+        tmp_written.replace(cache_path)
         logger.info("Built + cached CLint AD (%d FPs) -> %s", len(fps), cache_path)
         return cls(reference_fps=fps)
 
     @staticmethod
     def _build_reference_fps(training_csv: Path) -> list:
-        """Recompute the training set Morgan FPs (same exclusions as train_clint.py)."""
+        """Recompute the training set Morgan FPs.
+
+        The filter set deliberately mirrors ``scripts/train_clint_classifier.py``
+        (1476 compounds), NOT ``scripts/train_clint.py`` (1441, which applies an
+        additional ``clint_hep in (0.1, 1000)`` range drop). The Tier-3 AD gates
+        the classifier, so the reference set must equal the classifier's
+        training support — not the regressor's.
+        """
         scripts_dir = training_csv.resolve().parents[2] / "scripts"
         if str(scripts_dir) not in sys.path:
             sys.path.insert(0, str(scripts_dir))
