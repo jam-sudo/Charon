@@ -141,6 +141,20 @@ Full results: [Layer 3 report](validation/reports/layer3_fih_dose.md).
 
 Every `fu_p` and `clint_hepatocyte` prediction ships with a 90% log-space conformal confidence interval by default (calibrated against `adme_reference.csv` n=153 for `fu_p` and scaffold-CV OOF residuals n=1441 for `clint_hepatocyte`). Empirical in-sample coverage: both ~0.900. See [Layer 1 report § Conformal coverage](validation/reports/layer1_admet.md). CIs flow through `predict_properties` -> `Pipeline.from_smiles` -> `charon report` automatically; pass `CONFORMAL_OFF` to opt out.
 
+### CLint Tier 3 and applicability domain
+
+Charon's CLint prediction uses a three-tier strategy (CLAUDE.md §6j):
+
+- **Tier 1** -- experimental override from compound YAML. Always preferred when available.
+- **Tier 2** -- XGBoost regression (scaffold-CV AAFE 2.49). Ships with a 90% log-space conformal interval.
+- **Tier 3** -- 3-class classifier (Low `[0.1, 10)` / Med `[10, 50)` / High `[50, 1000]` uL/min/10^6 cells, scaffold-CV Macro F1 = 0.54) for compounds whose CLint-local applicability domain is LOW (max Tanimoto < 0.3 vs 1476 training compounds).
+
+A **CRITICAL warnings** section appears in the report whenever Tier 3 fires. The classifier emits a categorical distribution `{low, med, high}` that Layer 4 uncertainty propagates as categorical x log-uniform-within-bucket via an inverse-CDF that preserves Latin-Hypercube stratification. The point estimate is the log-geometric-mean center of the most-likely bucket (Low=1.0, Med=22.36, High=223.6 uL/min/10^6 cells); the CI is the bucket range.
+
+**AD=LOW prevalence is expected to be high on structurally diverse compound sets.** On the 153-compound `adme_reference.csv`, 50% fire as LOW; on the Obach-12 panel, 4 (dextromethorphan, omeprazole, theophylline, verapamil) do. This is by design -- the CLint training distribution is narrower than general drug-like space, and Tier 3 exists precisely to surface this honestly rather than pretend the Tier 2 regression is trustworthy on novel scaffolds. For any Tier 3 output, obtain an experimental CLint measurement before any dose decision.
+
+Pass `force_tier3=True` to `predict_properties` to route a compound through Tier 3 regardless of AD (useful for testing).
+
 ---
 
 ## Architecture overview
