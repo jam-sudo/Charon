@@ -87,6 +87,20 @@ def reset_default_conformal() -> None:
     _default_singleton = None
 
 
+def get_default_conformal() -> "ConformalPredictor":
+    """Return a lazily-constructed, module-cached calibrated predictor.
+
+    Wraps :meth:`ConformalPredictor.load_default` so every caller in the
+    process shares a single calibrated instance (the JSON cache still
+    backstops cold starts). :func:`reset_default_conformal` clears this
+    cache; used by tests to force a fresh build.
+    """
+    global _default_singleton
+    if _default_singleton is None:
+        _default_singleton = ConformalPredictor.load_default()
+    return _default_singleton
+
+
 @dataclass
 class CoverageReport:
     """Per-property quantile and empirical coverage."""
