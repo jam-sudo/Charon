@@ -14,7 +14,6 @@ Usage:
 from __future__ import annotations
 
 import hashlib
-import json
 import logging
 import sys
 from datetime import datetime, timezone
@@ -35,6 +34,7 @@ from _train_common import (  # noqa: E402
     inchikey14,
     load_validation_keys,
     murcko_scaffold,
+    update_model_metadata_dict,
 )
 from charon.predict.features import FEATURE_LENGTH, compute_features  # noqa: E402
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score  # noqa: E402
@@ -51,7 +51,6 @@ log = logging.getLogger("charon.train.clint_classifier")
 CLINT_SOURCE = DATA_TRAIN_DIR / "clint_merged.csv"
 MODEL_OUT = MODELS_DIR / "xgboost_clint_classifier.json"
 OOF_PROBS_OUT = MODELS_DIR / "xgboost_clint_classifier_oof_probs.npy"
-METADATA_PATH = MODELS_DIR / "model_metadata.json"
 
 CLEAN_SOURCES = {"tdc_hep", "chembl"}
 CLINT_MIN, CLINT_MAX = 0.1, 1000.0
@@ -107,10 +106,12 @@ def exclude_validation(df: pd.DataFrame) -> pd.DataFrame:
 def build_features(smiles_list: list[str]) -> tuple[np.ndarray, list[int]]:
     X_rows, valid_idx = [], []
     for i, smi in enumerate(smiles_list):
-        feat = compute_features(smi)
-        if feat is not None:
-            X_rows.append(feat)
-            valid_idx.append(i)
+        try:
+            feat = compute_features(smi)
+        except ValueError:
+            continue
+        X_rows.append(feat)
+        valid_idx.append(i)
     if not X_rows:
         return np.zeros((0, FEATURE_LENGTH)), []
     return np.vstack(X_rows), valid_idx
@@ -126,15 +127,6 @@ def scaffold_oof_probs(X: np.ndarray, y: np.ndarray, groups: list[str],
         oof[te] = clf.predict_proba(X[te])
         log.info("  Fold %d: %d train / %d test", fold + 1, len(tr), len(te))
     return oof
-
-
-def update_metadata(entry: dict) -> None:
-    try:
-        meta = json.loads(METADATA_PATH.read_text())
-    except FileNotFoundError:
-        meta = {}
-    meta["xgboost_clint_classifier"] = entry
-    METADATA_PATH.write_text(json.dumps(meta, indent=2))
 
 
 def main() -> None:
@@ -179,7 +171,7 @@ def main() -> None:
     np.save(OOF_PROBS_OUT, oof_probs)
     oof_sha = hashlib.sha256(OOF_PROBS_OUT.read_bytes()).hexdigest()
 
-    update_metadata({
+    update_model_metadata_dict("xgboost_clint_classifier", {
         "model_name": "xgboost_clint_classifier",
         "target": "clint_hep bucket {low <10, med 10-50, high >=50} uL/min/10^6 cells",
         "n_samples": int(len(y)),
