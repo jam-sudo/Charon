@@ -95,6 +95,10 @@ tmp/
 wandb/
 mlruns/
 
+# Conformal predictor cache — regenerated deterministically from tracked sources
+# (adme_reference.csv + xgboost_fup.json + xgboost_clint_oof_residuals.npy).
+models/conformal_cache.json
+
 # Logs
 *.log
 logs/
