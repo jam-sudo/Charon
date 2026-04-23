@@ -99,6 +99,10 @@ mlruns/
 # (adme_reference.csv + xgboost_fup.json + xgboost_clint_oof_residuals.npy).
 models/conformal_cache.json
 
+# CLint-local AD Morgan-FP cache — regenerates deterministically from
+# data/training/clint_merged.csv on first predict_properties call.
+models/clint_ad_fingerprints.npz
+
 # Logs
 *.log
 logs/

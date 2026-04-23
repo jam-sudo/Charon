@@ -115,6 +115,7 @@ def _flatten_property(prop: PredictedProperty) -> dict:
         "source": prop.source,
         "flag": prop.flag,
         "method": prop.method,
+        "classifier_probs": prop.classifier_probs,
     }
 
 

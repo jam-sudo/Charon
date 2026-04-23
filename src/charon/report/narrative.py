@@ -136,6 +136,48 @@ def _ci_cell(entry: dict) -> str:
     return f"[{format_value(lo)}, {format_value(hi)}]"
 
 
+def render_critical_warnings(adme_entries: list[dict]) -> str:
+    """Emit a '## CRITICAL warnings' section listing all classification-sourced entries.
+
+    Returns an empty string if no entry is classification-sourced.
+    """
+    critical = [e for e in adme_entries if e.get("source") == "classification"]
+    if not critical:
+        return ""
+
+    lines = ["## CRITICAL warnings", ""]
+    for e in critical:
+        probs = e.get("classifier_probs") or {}
+        probs_str = ", ".join(
+            f"{k.title()}: {v:.2f}" for k, v in probs.items()
+        )
+        lines.append(f"**{e.get('name', '?')}** — {e.get('flag', '')}")
+        if probs_str:
+            lines.append(f"  - Classifier probabilities: {probs_str}")
+        lines.append(
+            f"  - Bucket range: [{e.get('ci_lower', '?')}, {e.get('ci_upper', '?')}]"
+            f" {e.get('unit', '')}"
+        )
+        lines.append("  - Action: obtain experimental measurement before any dose decision.")
+        lines.append("")
+    return "\n".join(lines)
+
+
+def _render_critical_warnings_section(data: ReportData) -> str:
+    """Section-renderer adapter: build entries from ``data.properties`` and render."""
+    if not data.properties:
+        return ""
+    entries: list[dict] = []
+    for name, entry in data.properties.items():
+        if not isinstance(entry, dict):
+            continue
+        # Clone + inject the property key as 'name' so the warning has a label.
+        merged = dict(entry)
+        merged.setdefault("name", name)
+        entries.append(merged)
+    return render_critical_warnings(entries)
+
+
 def _render_adme_table(data: ReportData) -> str:
     lines = ["## 3. ADME Predictions", ""]
     if not data.properties:
@@ -429,6 +471,7 @@ _SECTION_RENDERERS = (
     _render_header,
     _render_executive_summary,
     _render_compound_profile,
+    _render_critical_warnings_section,
     _render_adme_table,
     _render_ivive_audit,
     _render_pk_results,

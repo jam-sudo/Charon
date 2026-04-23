@@ -49,6 +49,12 @@ from charon.core.schema import (
 )
 from charon.predict.admet_ensemble import ADMEPrediction, ADMETPredictor
 from charon.predict.bp_ratio import predict_bp_ratio
+from charon.predict.clint_ad import ClintLocalAD
+from charon.predict.clint_classifier import (
+    BUCKET_CENTERS,
+    BUCKET_RANGES,
+    ClintClassifier,
+)
 from charon.predict.conformal import (
     ConformalPredictor,
     CoverageReport,
@@ -72,6 +78,32 @@ class _ConformalOff:
 
 
 CONFORMAL_OFF = _ConformalOff()
+
+
+# --- Tier 3 lazy module singletons -----------------------------------------
+_default_clint_ad: ClintLocalAD | None = None
+_default_clint_classifier: ClintClassifier | None = None
+
+
+def _default_clint_ad_instance() -> ClintLocalAD:
+    global _default_clint_ad
+    if _default_clint_ad is None:
+        _default_clint_ad = ClintLocalAD.load_default()
+    return _default_clint_ad
+
+
+def _default_clint_classifier_instance() -> ClintClassifier:
+    global _default_clint_classifier
+    if _default_clint_classifier is None:
+        _default_clint_classifier = ClintClassifier.load_default()
+    return _default_clint_classifier
+
+
+def reset_tier3_defaults() -> None:
+    """Test helper: clear Tier 3 singletons."""
+    global _default_clint_ad, _default_clint_classifier
+    _default_clint_ad = None
+    _default_clint_classifier = None
 
 
 __all__ = [
@@ -119,6 +151,8 @@ def predict_properties(
     smiles: str,
     predictor: ADMETPredictor | None = None,
     conformal: "ConformalPredictor | _ConformalOff | None" = None,
+    *,
+    force_tier3: bool = False,
 ) -> CompoundProperties:
     """Run the full Layer 1 prediction pipeline on a SMILES.
 
@@ -202,6 +236,68 @@ def predict_properties(
                 "clint_hepatocyte", adme.clint_hepatocyte
             )
 
+    # 7b. CLint Tier 3 branching: consult CLint-local AD; route LOW AD
+    # (or explicit force_tier3=True) to the 3-class classifier fallback.
+    tier3_active = force_tier3
+    ad_classification: str = "HIGH"  # default when AD disabled / unavailable
+    ad_max_sim: float | None = None
+    try:
+        ad = _default_clint_ad_instance()
+        ad_max_sim = ad.max_similarity(smiles)
+        ad_classification = ad.classify(ad_max_sim)
+        if ad_classification == "LOW":
+            tier3_active = True
+    except (FileNotFoundError, OSError) as exc:
+        import logging as _logging
+        _logging.getLogger(__name__).warning(
+            "CLint-local AD unavailable (%s); continuing with Tier 2 only", exc,
+        )
+
+    if tier3_active:
+        try:
+            clf = _default_clint_classifier_instance()
+            probs = clf.predict_proba(smiles)
+        except (FileNotFoundError, OSError) as exc:
+            raise RuntimeError(
+                f"Tier 3 requested but classifier is unavailable: {exc}"
+            ) from exc
+        argmax_bucket = max(probs, key=probs.get)
+        bucket_lo, bucket_hi = BUCKET_RANGES[argmax_bucket]
+        sim_str = (
+            f"{ad_max_sim:.3f}"
+            if ad_max_sim is not None and isinstance(ad_max_sim, float)
+            else "n/a"
+        )
+        clint_prop = PredictedProperty(
+            value=BUCKET_CENTERS[argmax_bucket],
+            ci_90_lower=bucket_lo,
+            ci_90_upper=bucket_hi,
+            source="classification",
+            unit="uL/min/10^6 cells",
+            flag=(
+                f"clint_tier3_classification; CRITICAL — experimental measurement "
+                f"essential; AD_max={sim_str}"
+            ),
+            classifier_probs=probs,
+        )
+    else:
+        tier2_flag = (
+            "clint_tier2_ml; hepatocyte units; experimental value recommended"
+        )
+        if ad_classification == "MODERATE" and ad_max_sim is not None:
+            tier2_flag = (
+                f"{tier2_flag}; ad_moderate_caution; AD_max={ad_max_sim:.3f}"
+            )
+        clint_prop = PredictedProperty(
+            value=float(adme.clint_hepatocyte),
+            ci_90_lower=None if clint_lo is None else float(clint_lo),
+            ci_90_upper=None if clint_hi is None else float(clint_hi),
+            source="ml_ensemble",
+            unit="uL/min/10^6 cells",
+            flag=tier2_flag,
+            classifier_probs=None,
+        )
+
     # 8. Assemble Pydantic schema.
     physicochemical = PhysicochemicalProperties(
         logp=_predicted(clogp, source="derived", unit=""),
@@ -231,16 +327,7 @@ def predict_properties(
         ),
     )
     metabolism = MetabolismProperties(
-        clint_uL_min_mg=_predicted(
-            adme.clint_hepatocyte,
-            source="ml_ensemble",
-            unit="uL/min/10^6 cells",
-            ci_lower=clint_lo,
-            ci_upper=clint_hi,
-            flag=(
-                "clint_tier2_ml; hepatocyte units; experimental value recommended"
-            ),
-        ),
+        clint_uL_min_mg=clint_prop,
     )
     safety = SafetyProperties()
     renal = RenalProperties(

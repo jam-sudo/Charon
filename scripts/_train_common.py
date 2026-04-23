@@ -238,3 +238,23 @@ def update_model_metadata(report: CVReport) -> None:
     metadata[report.model_name] = report.as_dict()
     MODEL_METADATA_JSON.write_text(json.dumps(metadata, indent=2, sort_keys=True))
     log.info("Wrote metadata for %s to %s", report.model_name, MODEL_METADATA_JSON)
+
+
+def update_model_metadata_dict(name: str, entry: dict) -> None:
+    """Upsert a metadata entry under ``name`` into ``model_metadata.json``.
+
+    Use this when the report shape doesn't match ``CVReport`` (e.g. multi-class
+    classifier where ``per_class_f1`` / ``confusion_matrix`` / ``class_counts``
+    replace the regression ``aafe`` / ``pct_within_*fold`` fields).
+
+    Uses ``sort_keys=True`` for deterministic diffs and tolerates an existing
+    corrupt JSON by starting fresh (with a warning logged by the caller if
+    the caller cares).
+    """
+    path = MODELS_DIR / "model_metadata.json"
+    try:
+        meta = json.loads(path.read_text()) if path.exists() else {}
+    except (json.JSONDecodeError, OSError):
+        meta = {}
+    meta[name] = entry
+    path.write_text(json.dumps(meta, indent=2, sort_keys=True))

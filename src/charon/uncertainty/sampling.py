@@ -51,11 +51,13 @@ _FALLBACK_CV: dict[str, float] = {
     "bp_ratio": 0.10,
 }
 
-# Distribution type per parameter (normal vs lognormal)
-_DIST_TYPE: dict[str, Literal["normal", "lognormal"]] = {
+# Distribution type per parameter (normal, lognormal, classification).
+# "classification" applies only to CLint when source == "classification";
+# its spec tuple is (probs_dict, None, "classification").
+_DIST_TYPE: dict[str, Literal["normal", "lognormal", "classification"]] = {
     "logp": "normal",
     "fu_p": "lognormal",
-    "clint_uL_min_mg": "lognormal",
+    "clint_uL_min_mg": "lognormal",  # overridden to "classification" at runtime
     "peff_cm_s": "lognormal",
     "mppgl": "normal",
     "bp_ratio": "normal",
@@ -115,6 +117,75 @@ class SamplingResult:
     n_params_sampled: int
     correlation_applied: bool
     seed: int
+
+
+# ---------------------------------------------------------------------------
+# Tier 3 classification sampling helpers (Sprint 8)
+# ---------------------------------------------------------------------------
+
+_CLINT_BUCKETS_FOR_SAMPLING = (
+    ("low",  0.1, 10.0),
+    ("med",  10.0, 50.0),
+    ("high", 50.0, 1000.0),
+)
+
+
+def _sample_classification_clint(
+    probs: dict[str, float],
+    n: int,
+    rng: np.random.Generator,
+) -> np.ndarray:
+    """Sample CLint from Tier 3 classification output.
+
+    Draws ``n`` samples: a bucket per sample from the categorical
+    ``(P_low, P_med, P_high)``, then log-uniform within the selected
+    bucket's physical range. Buckets are frozen (CLAUDE.md §6j) and must
+    match ``charon.predict.clint_classifier.BUCKET_RANGES`` exactly.
+    """
+    bucket_names = [name for name, _, _ in _CLINT_BUCKETS_FOR_SAMPLING]
+    p = np.array([probs[name] for name in bucket_names], dtype=np.float64)
+    p = p / p.sum()  # renormalise against the 1% validator tolerance
+    labels = rng.choice(3, size=n, p=p)
+    samples = np.empty(n, dtype=np.float64)
+    for lbl, (_, lo, hi) in enumerate(_CLINT_BUCKETS_FOR_SAMPLING):
+        mask = labels == lbl
+        if not np.any(mask):
+            continue
+        samples[mask] = 10.0 ** rng.uniform(
+            math.log10(lo), math.log10(hi), size=int(mask.sum()),
+        )
+    return samples
+
+
+def _classification_inverse_cdf(
+    u: np.ndarray,
+    probs: dict[str, float],
+) -> np.ndarray:
+    """Map LHS uniform samples in [0, 1] to classification mixture samples.
+
+    Cumulative distribution: for u in [0, p_low] pick the Low bucket,
+    for u in [p_low, p_low + p_med] pick Med, else High. Within each
+    bucket, the remaining fraction of u is log-uniform within the range.
+    """
+    bucket_names = [name for name, _, _ in _CLINT_BUCKETS_FOR_SAMPLING]
+    p = np.array([probs[name] for name in bucket_names], dtype=np.float64)
+    p = p / p.sum()
+    cum = np.cumsum(p)
+    out = np.empty_like(u, dtype=np.float64)
+    for i, (_, lo, hi) in enumerate(_CLINT_BUCKETS_FOR_SAMPLING):
+        lo_thresh = 0.0 if i == 0 else cum[i - 1]
+        hi_thresh = cum[i]
+        # Last bucket includes upper bound to catch u == 1.0
+        if i < len(_CLINT_BUCKETS_FOR_SAMPLING) - 1:
+            mask = (u >= lo_thresh) & (u < hi_thresh)
+        else:
+            mask = (u >= lo_thresh) & (u <= hi_thresh)
+        if not np.any(mask):
+            continue
+        span = max(hi_thresh - lo_thresh, 1e-12)
+        pos = (u[mask] - lo_thresh) / span
+        out[mask] = 10.0 ** (math.log10(lo) + pos * (math.log10(hi) - math.log10(lo)))
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -181,14 +252,28 @@ def build_param_specs(
     # --- CLint ---
     clint_prop = props.metabolism.clint_uL_min_mg
     if clint_prop is not None:
-        mu = clint_prop.value
-        if clint_prop.ci_90_lower is not None and clint_prop.ci_90_upper is not None:
-            sigma_log = (
-                math.log10(clint_prop.ci_90_upper) - math.log10(clint_prop.ci_90_lower)
-            ) / _CI_WIDTH_DIVISOR
+        if (
+            clint_prop.source == "classification"
+            and clint_prop.classifier_probs is not None
+        ):
+            # Tier 3: stash the probs dict in the mu slot; dist="classification"
+            # tells generate_lhs_samples to branch via the inverse-CDF.
+            specs["clint_uL_min_mg"] = (
+                clint_prop.classifier_probs, None, "classification",
+            )
         else:
-            sigma_log = _FALLBACK_CV["clint_uL_min_mg"] * math.log10(math.e)
-        specs["clint_uL_min_mg"] = (mu, sigma_log, "lognormal")
+            mu = clint_prop.value
+            if (
+                clint_prop.ci_90_lower is not None
+                and clint_prop.ci_90_upper is not None
+            ):
+                sigma_log = (
+                    math.log10(clint_prop.ci_90_upper)
+                    - math.log10(clint_prop.ci_90_lower)
+                ) / _CI_WIDTH_DIVISOR
+            else:
+                sigma_log = _FALLBACK_CV["clint_uL_min_mg"] * math.log10(math.e)
+            specs["clint_uL_min_mg"] = (mu, sigma_log, "lognormal")
 
     # --- Peff ---
     peff_prop = props.permeability.peff_cm_s
@@ -349,6 +434,12 @@ def generate_lhs_samples(
             log_mu = math.log10(mu)
             log_vals = norm.ppf(unit_samples[:, j], loc=log_mu, scale=sigma)
             samples[:, j] = np.power(10.0, log_vals)
+        elif dist == "classification":
+            # mu is actually a probs dict (duck-typed by convention, see
+            # build_param_specs). Inverse-CDF preserves LHS stratification.
+            samples[:, j] = _classification_inverse_cdf(
+                unit_samples[:, j], mu,
+            )
         else:
             raise ValueError(f"Unknown distribution type {dist!r} for {name}")
 
