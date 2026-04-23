@@ -20,7 +20,7 @@ This section is the most important part of this README. Read it before using any
 - **Not FDA-cleared. Research and educational tool only.** Any FIH dose selection for real clinical trials must go through a qualified pharmacometrician with validated commercial software.
 - **Accuracy vs targets**: AAFE_CL = 3.99, AAFE_Vss = 3.03 on the Obach n=12 panel (targets: 2.5 and 3.0 respectively). See [Layer 2 report](validation/reports/layer2_human_pk.md).
 - **CLint Tier 2 ML limit**: scaffold-CV AAFE ~2.5. Experimental CLint override is strongly recommended for any serious use.
-- **Layer 3 FIH dose validation deferred**: no public tier2_drugs_at_fda dataset has been built. FIH dose accuracy is unvalidated.
+- **Layer 3 FIH dose validation is a Sprint 7 baseline**: 3/5 gold within 3-fold, 12/12 sanity floor pass. Computed via PAD path (target_ceff_nM, safety_factor=10) on iv_bolus routes; Tier A fold-errors carry a `1/F` bias since reference doses are clinical oral amounts. See [Validation status § Layer 3](#layer-3----fih-dose-sprint-7-baseline).
 - **No CYP phenotype modeling**: CYP2C19 polymorphisms (omeprazole) and CYP2D6 polymorphisms (dextromethorphan) are not modeled. Compounds primarily cleared by polymorphic CYPs will have higher prediction error.
 - **Conformal CI is marginal, not conditional**: out-of-domain (OOD) compounds may have actual coverage well below the nominal 90%.
 - **Single-subject only**: no population variability, no virtual trials, no special populations (Phase B scope).
@@ -123,9 +123,23 @@ CLint was excluded from the Layer 1 benchmark because Charon predicts in hepatoc
 
 Full results: [Layer 2 report](validation/reports/layer2_human_pk.md)
 
-### Layer 3 -- FIH dose
+### Layer 3 -- FIH dose (Sprint 7 baseline)
 
-**DEFERRED.** No public tier2_drugs_at_fda dataset has been built. FIH dose accuracy has not been validated against observed clinical starting doses.
+Two-tier benchmark against `validation/data/fih_reference/panel.yaml`. All compounds run as `iv_bolus` because the reused Obach YAMLs lack absorption data; reference doses are daily oral equivalents, so Tier A fold-errors carry a `1/F` bias and Tier B is conservative.
+
+| Tier | Metric | Result | §8 target |
+| --- | --- | --- | --- |
+| Gold (n=5) | Within-3-fold of reference FIH dose | 3/5 (60%) | >= 60% [PASS] |
+| Gold (n=5) | Within-10-fold of reference FIH dose | 4/5 (80%) | -- |
+| Sanity (n=12) | MRSD <= approved starting dose | 12/12 (100%) | gated [PASS] |
+
+Tier A misses: `propranolol` (fold 36x; high-F-variance beta-blocker) and `verapamil` (fold 8x, within 10x; CYP3A4 first-pass bias). MRSD computed via PAD path with `safety_factor=10`.
+
+Full results: [Layer 3 report](validation/reports/layer3_fih_dose.md).
+
+### Uncertainty
+
+Every `fu_p` and `clint_hepatocyte` prediction ships with a 90% log-space conformal confidence interval by default (calibrated against `adme_reference.csv` n=153 for `fu_p` and scaffold-CV OOF residuals n=1441 for `clint_hepatocyte`). Empirical in-sample coverage: both ~0.900. See [Layer 1 report § Conformal coverage](validation/reports/layer1_admet.md). CIs flow through `predict_properties` -> `Pipeline.from_smiles` -> `charon report` automatically; pass `CONFORMAL_OFF` to opt out.
 
 ---
 
