@@ -24,6 +24,7 @@ SourceType = Literal[
     "physiological",
     "experimental",
     "literature",
+    "classification",   # Sprint 8: Tier 3 CLint classifier output
 ]
 """Taxonomy of data-source provenance."""
 
@@ -42,6 +43,7 @@ class PredictedProperty(BaseModel):
     unit: str | None = None
     method: str | None = None
     flag: str | None = None
+    classifier_probs: dict[str, float] | None = None
 
     @field_validator("value")
     @classmethod
@@ -62,6 +64,16 @@ class PredictedProperty(BaseModel):
                 raise ValueError(
                     f"value ({self.value}) must be "
                     f"<= ci_90_upper ({self.ci_90_upper})"
+                )
+        return self
+
+    @model_validator(mode="after")
+    def _classifier_probs_sum_to_one(self) -> "PredictedProperty":
+        if self.classifier_probs is not None:
+            total = sum(self.classifier_probs.values())
+            if not (0.99 <= total <= 1.01):
+                raise ValueError(
+                    f"classifier_probs must sum to ~1, got {total:.4f}"
                 )
         return self
 
