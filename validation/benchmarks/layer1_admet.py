@@ -410,6 +410,31 @@ def run_benchmark(
         "notes": notes,
     }
 
+    # --- Conformal coverage section (per-property from default predictor) ---
+    try:
+        from charon.predict.conformal import ConformalPredictor
+
+        cp = ConformalPredictor.load_default()
+        coverage_rows = [
+            {
+                "property": prop,
+                "n_samples": rpt.n_samples,
+                "empirical_coverage": rpt.empirical_coverage,
+                "quantile_log10": rpt.quantile_log10,
+                "factor": rpt.factor,
+                "median_fold_error": rpt.median_fold_error,
+                "mean_fold_error": rpt.mean_fold_error,
+                "warning": rpt.warning or "",
+            }
+            for prop, rpt in cp._reports.items()
+        ]
+        if coverage_rows:
+            payload.setdefault("extra_sections", {})["Conformal coverage"] = (
+                coverage_rows
+            )
+    except Exception as exc:  # pragma: no cover - defensive
+        print(f"[warn] conformal coverage unavailable: {exc}")
+
     # --- Emit report ---
     stem = reports_dir / "layer1_admet"
     md_path, json_path = emit_report(payload, stem=stem)

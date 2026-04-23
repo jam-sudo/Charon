@@ -1,6 +1,6 @@
 # Charon Layer 1 ADMET Benchmark — adme_reference.csv (n=153)
 
-**Generated:** 2026-04-16T10:26:46.167828+00:00
+**Generated:** 2026-04-23T07:49:29.166972+00:00
 **Panel:** adme_reference_v1
 
 > Evaluated on the conformal calibration set (n=153). Point-estimate metrics are meaningful; 90% CI coverage is tautological by construction (P90 was fit on the same set) and does NOT reflect true out-of-sample performance. CLint excluded: unit mismatch between Charon (hepatocyte uL/min/10^6) and reference (recombinant uL/min/pmol CYP3A4).
@@ -178,6 +178,13 @@
 | theophylline | Cn1c(=O)c2[nH]cnc2n(C)c1=O | -0.02 | -1.04 | -1.02 | 0.6 | 0.2845 | 0.72 | 0.678 | 1.000e-04 | - |
 | allopurinol | O=c1[nH]cnc2[nH]ncc12 | -1.1 | -0.3538 | 0.7462 | 0.97 | 0.2509 | 0.9 | 0.6629 | 7.000e-05 | - |
 | febuxostat | CC(C)COc1cc(C#N)c(-c2cc(C)on2)cc1C(=O)O | 1.69 | 3.255 | 1.565 | 6.000e-03 | 0.03736 | 0.8 | 0.5618 | 1.300e-04 | - |
+
+## Conformal coverage
+
+| property | n_samples | empirical_coverage | quantile_log10 | factor | median_fold_error | mean_fold_error | warning |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| fup | 151 | 0.9007 | 0.8181 | 6.578 | 2.414 | 2.714 |  |
+| clint_hepatocyte | 1.441e+03 | 0.9001 | 0.8288 | 6.741 | 2.152 | 2.485 |  |
 
 ## Excluded
 

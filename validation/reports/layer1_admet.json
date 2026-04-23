@@ -1,7 +1,7 @@
 {
   "title": "Charon Layer 1 ADMET Benchmark \u2014 adme_reference.csv (n=153)",
   "panel": "adme_reference_v1",
-  "date_utc": "2026-04-16T10:26:46.167828+00:00",
+  "date_utc": "2026-04-23T07:49:29.166972+00:00",
   "disclaimer": "Evaluated on the conformal calibration set (n=153). Point-estimate metrics are meaningful; 90% CI coverage is tautological by construction (P90 was fit on the same set) and does NOT reflect true out-of-sample performance. CLint excluded: unit mismatch between Charon (hepatocyte uL/min/10^6) and reference (recombinant uL/min/pmol CYP3A4).",
   "summary": [
     {
@@ -2037,5 +2037,29 @@
     "peff_cm_s: predicted only when permeability module is active (ACAT pipeline).",
     "fu_p min-positive guard: obs and pred both > 1e-4. bp_ratio guard: both > 0.1. peff guard: both > 1e-8.",
     "logP source: RDKit Crippen cLogP (derived). fu_p source: XGBoost ml_ensemble. bp_ratio source: empirical formula."
-  ]
+  ],
+  "extra_sections": {
+    "Conformal coverage": [
+      {
+        "property": "fup",
+        "n_samples": 151,
+        "empirical_coverage": 0.9006622516556292,
+        "quantile_log10": 0.8181015876453155,
+        "factor": 6.578116908543875,
+        "median_fold_error": 2.4143800283712595,
+        "mean_fold_error": 2.7138817135457383,
+        "warning": ""
+      },
+      {
+        "property": "clint_hepatocyte",
+        "n_samples": 1441,
+        "empirical_coverage": 0.9000693962526024,
+        "quantile_log10": 0.8287507944637014,
+        "factor": 6.741410831086735,
+        "median_fold_error": 2.151673204539034,
+        "mean_fold_error": 2.4852904080534666,
+        "warning": ""
+      }
+    ]
+  }
 }
