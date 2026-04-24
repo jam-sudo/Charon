@@ -82,3 +82,34 @@ def test_decomposition_every_row_numeric(decomposition_json):
             v = row[key]
             assert isinstance(v, (int, float))
             assert not math.isnan(v), f"{row['compound']}: {key} is NaN"
+
+
+def test_liver_model_whatif_produces_nonzero_attribution(decomposition_json):
+    """Regression guard: afb2464 had aggregate_pct_liver_model = 0% because
+    Pipeline(liver_model=X) is a no-op for the PBPK ODE. Analytical scaling
+    (a4c5b5d+) must produce non-zero liver-model attribution for a panel
+    whose compounds span clint values from near-zero to high extraction.
+    """
+    summary = decomposition_json["summary"]
+    assert summary["aggregate_pct_liver_model"] > 0.0, (
+        "aggregate_pct_liver_model is 0% — "
+        "likely regression to per-model Pipeline calls (Pipeline.liver_model "
+        "is a no-op for the PBPK ODE)"
+    )
+
+
+def test_liver_model_diverges_for_majority_of_panel(decomposition_json):
+    """At least 8 of 12 Tier A compounds should show non-trivial liver-model
+    divergence (|log10(fold_liver_model)| > 0.001). The two expected exceptions
+    are near-zero-CLint compounds (diazepam, lisinopril) where all three
+    liver models converge by construction.
+    """
+    rows = decomposition_json["extra_sections"]["Per-compound decomposition"]
+    n_divergent = sum(
+        1 for r in rows
+        if r["fold_liver_model"] > 0 and abs(math.log10(r["fold_liver_model"])) > 0.001
+    )
+    assert n_divergent >= 8, (
+        f"Only {n_divergent}/12 compounds show liver-model divergence; "
+        f"expected >= 8 on this panel"
+    )

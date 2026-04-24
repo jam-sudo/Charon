@@ -37,7 +37,7 @@ sys.path.insert(0, str(REPO_ROOT))
 from charon import Pipeline  # noqa: E402
 from charon.core.liver_models import dispersion, parallel_tube, well_stirred  # noqa: E402
 from charon.core.schema import CompoundConfig, DoseProjectionConfig  # noqa: E402
-from charon.core.units import HUMAN_QH_L_H  # noqa: E402
+from charon.pbpk.topology import load_species_topology  # noqa: E402
 from charon.translational.decomposition import (  # noqa: E402
     decompose_fold_error,
     to_symmetric,
@@ -59,16 +59,23 @@ def _load_compound(name: str) -> CompoundConfig:
     return CompoundConfig.model_validate(yaml.safe_load(path.read_text()))
 
 
-def _compute_baseline_and_whatif(entry: dict) -> dict:
+def _compute_baseline_and_whatif(entry: dict) -> dict[str, float]:
     """Run Pipeline once (well_stirred baseline) then analytically scale MRSD
     for parallel_tube and dispersion what-ifs.
 
     Rationale: Charon's PBPK ODE embeds well-stirred extraction directly
     (CLint_liver * fu_b * C_liver_blood_out), so Pipeline(liver_model=X) is
-    a no-op for the simulation. MRSD is proportional to CL_total via the PAD
-    path, so alternate-model MRSDs scale as:
+    a no-op for the simulation. MRSD is APPROXIMATELY proportional to CL_total
+    via the PAD path; the ODE-derived cl_apparent is not algebraically identical
+    to CLh_ws + CLrenal for high-Vss compounds (multi-compartment distributional
+    effects). Alternate-model MRSDs are scaled as:
 
         mrsd_model = mrsd_ws * (CLh_model + cl_renal) / (CLh_ws + cl_renal)
+
+    The approximation is sub-percent for most Tier A compounds and acceptable
+    for Sprint 10's research diagnostic. Note the clint_liver_L_h passed to
+    liver-model functions is the whole-liver IVIVE-scaled value (L/h), NOT
+    the in-vitro microsomal CLint (uL/min/mg).
 
     Returns a dict with mrsd_ws_mg, mrsd_pt_mg, mrsd_disp_mg,
     clh_ws_L_h, clh_pt_L_h, clh_disp_L_h, cl_renal_L_h.
@@ -94,7 +101,8 @@ def _compute_baseline_and_whatif(entry: dict) -> dict:
     clint_liver = float(md["clint_liver_L_h"])
     cl_renal = float(md["cl_renal_L_h"])
     fu_b = float(md["fu_b"])
-    qh = HUMAN_QH_L_H
+    topology = load_species_topology("human")
+    qh = topology.tissues["liver"].blood_flow_L_h
 
     clh_ws = well_stirred(qh=qh, fu_b=fu_b, clint_liver=clint_liver)
     clh_pt = parallel_tube(qh=qh, fu_b=fu_b, clint_liver=clint_liver)
