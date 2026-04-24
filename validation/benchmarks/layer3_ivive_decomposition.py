@@ -3,10 +3,18 @@
 See docs/superpowers/specs/2026-04-23-sprint10-ivive-bias-diagnostic-design.md.
 
 For each of 12 Tier A compounds:
-  1. Run Pipeline with liver_model in {well_stirred, parallel_tube, dispersion}.
-  2. Load literature F from bioavailability.csv.
-  3. Call decompose_fold_error().
-  4. Aggregate into a report.
+  1. Run Pipeline once (well_stirred baseline).
+  2. Analytically compute MRSD for parallel_tube and dispersion what-ifs
+     via CL-proportional scaling:
+       mrsd_model = mrsd_ws * (CLh_model + cl_renal) / (CLh_ws + cl_renal)
+  3. Load literature F from bioavailability.csv.
+  4. Call decompose_fold_error().
+  5. Aggregate into a report.
+
+Note: Pipeline.liver_model is a no-op for the PBPK ODE, which embeds
+well-stirred extraction directly (CLint_liver * fu_b * C_liver_blood_out).
+Running Pipeline 3× per compound would yield identical MRSDs; the
+analytical what-if approach correctly reflects the model divergence.
 
 This is research-only — no production code changes, no gating.
 Exit 0 on success, 1 on data errors.
@@ -27,7 +35,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
 from charon import Pipeline  # noqa: E402
+from charon.core.liver_models import dispersion, parallel_tube, well_stirred  # noqa: E402
 from charon.core.schema import CompoundConfig, DoseProjectionConfig  # noqa: E402
+from charon.core.units import HUMAN_QH_L_H  # noqa: E402
 from charon.translational.decomposition import (  # noqa: E402
     decompose_fold_error,
     to_symmetric,
@@ -41,8 +51,6 @@ DEFAULT_BIOAVAILABILITY = (
 COMPOUNDS_DIR = REPO_ROOT / "validation" / "data" / "tier1_obach" / "compounds"
 DEFAULT_STEM = REPO_ROOT / "validation" / "reports" / "layer3_ivive_decomposition"
 
-LIVER_MODELS = ("well_stirred", "parallel_tube", "dispersion")
-
 
 def _load_compound(name: str) -> CompoundConfig:
     path = COMPOUNDS_DIR / f"{name}.yaml"
@@ -51,14 +59,26 @@ def _load_compound(name: str) -> CompoundConfig:
     return CompoundConfig.model_validate(yaml.safe_load(path.read_text()))
 
 
-def _compute_mrsd(entry: dict, liver_model: str) -> float:
-    """Single MRSD via PAD path with the specified liver model."""
+def _compute_baseline_and_whatif(entry: dict) -> dict:
+    """Run Pipeline once (well_stirred baseline) then analytically scale MRSD
+    for parallel_tube and dispersion what-ifs.
+
+    Rationale: Charon's PBPK ODE embeds well-stirred extraction directly
+    (CLint_liver * fu_b * C_liver_blood_out), so Pipeline(liver_model=X) is
+    a no-op for the simulation. MRSD is proportional to CL_total via the PAD
+    path, so alternate-model MRSDs scale as:
+
+        mrsd_model = mrsd_ws * (CLh_model + cl_renal) / (CLh_ws + cl_renal)
+
+    Returns a dict with mrsd_ws_mg, mrsd_pt_mg, mrsd_disp_mg,
+    clh_ws_L_h, clh_pt_L_h, clh_disp_L_h, cl_renal_L_h.
+    """
     compound = _load_compound(entry["name"])
     pipe = Pipeline(
         compound,
         route=entry["route"],
         dose_mg=1.0,
-        liver_model=liver_model,
+        liver_model="well_stirred",
         dose_projection=DoseProjectionConfig(
             target_ceff_nM=float(entry["target_ceff_nM"]),
             safety_factor=10.0,
@@ -68,7 +88,37 @@ def _compute_mrsd(entry: dict, liver_model: str) -> float:
     result = pipe.run()
     if result.dose_recommendation is None:
         raise RuntimeError(f"No dose recommendation for {entry['name']}")
-    return float(result.dose_recommendation.mrsd_mg)
+    mrsd_ws = float(result.dose_recommendation.mrsd_mg)
+
+    md = result.metadata
+    clint_liver = float(md["clint_liver_L_h"])
+    cl_renal = float(md["cl_renal_L_h"])
+    fu_b = float(md["fu_b"])
+    qh = HUMAN_QH_L_H
+
+    clh_ws = well_stirred(qh=qh, fu_b=fu_b, clint_liver=clint_liver)
+    clh_pt = parallel_tube(qh=qh, fu_b=fu_b, clint_liver=clint_liver)
+    clh_disp = dispersion(qh=qh, fu_b=fu_b, clint_liver=clint_liver)
+
+    cl_total_ws = clh_ws + cl_renal
+    if cl_total_ws <= 0:
+        raise RuntimeError(
+            f"{entry['name']}: cl_total_ws <= 0 "
+            f"(clh_ws={clh_ws}, cl_renal={cl_renal})"
+        )
+
+    mrsd_pt = mrsd_ws * (clh_pt + cl_renal) / cl_total_ws
+    mrsd_disp = mrsd_ws * (clh_disp + cl_renal) / cl_total_ws
+
+    return {
+        "mrsd_ws_mg": mrsd_ws,
+        "mrsd_pt_mg": mrsd_pt,
+        "mrsd_disp_mg": mrsd_disp,
+        "clh_ws_L_h": clh_ws,
+        "clh_pt_L_h": clh_pt,
+        "clh_disp_L_h": clh_disp,
+        "cl_renal_L_h": cl_renal,
+    }
 
 
 def _load_bioavailability(path: Path) -> dict[str, dict]:
@@ -99,7 +149,12 @@ def run_panel(panel_path: Path, bioav_path: Path) -> dict:
             raise RuntimeError(
                 f"{name} missing from bioavailability.csv — rerun Task 1 curation"
             )
-        mrsds = {m: _compute_mrsd(entry, m) for m in LIVER_MODELS}
+        bundle = _compute_baseline_and_whatif(entry)
+        mrsds = {
+            "well_stirred": bundle["mrsd_ws_mg"],
+            "parallel_tube": bundle["mrsd_pt_mg"],
+            "dispersion": bundle["mrsd_disp_mg"],
+        }
         bioav_row = bioav[name]
         result = decompose_fold_error(
             mrsd_ws=mrsds["well_stirred"],
@@ -114,6 +169,10 @@ def run_panel(panel_path: Path, bioav_path: Path) -> dict:
             "mrsd_ws_mg": mrsds["well_stirred"],
             "mrsd_pt_mg": mrsds["parallel_tube"],
             "mrsd_disp_mg": mrsds["dispersion"],
+            "clh_ws_L_h": bundle["clh_ws_L_h"],
+            "clh_pt_L_h": bundle["clh_pt_L_h"],
+            "clh_disp_L_h": bundle["clh_disp_L_h"],
+            "cl_renal_L_h": bundle["cl_renal_L_h"],
             "reference_fih_mg": float(entry["reference_fih_mg"]),
             "fih_reference_route": bioav_row["fih_reference_route"],
             "f_lit": bioav_row["f_oral"],
@@ -167,6 +226,8 @@ def run_panel(panel_path: Path, bioav_path: Path) -> dict:
             "fold_residual: unexplained remainder (transporter, non-hepatic, UGT, model-gap).",
             "Sorted by fold_residual descending (worst-unexplained first).",
             "Aggregate %: 100 * sum(|log10(factor)|) / sum(|log10(fold_observed)|).",
+            "Liver-model what-ifs are analytical (mrsd_model = mrsd_ws * CL_model/CL_ws).",
+            "Pipeline.liver_model is a no-op for the PBPK ODE; only one Pipeline run per compound.",
             "Research only — no production code changes.",
         ],
     }
