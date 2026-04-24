@@ -41,5 +41,16 @@ properties:
       method: "Sun 2002 Adv Drug Deliv Rev 54:273 Caco-2 Papp~30e-6 cm/s; papp_to_peff -> ~2.2e-4 cm/s"
   metabolism:
     clint_uL_min_mg: {value: 11.0, source: experimental, unit: uL/min/mg, method: "Obach 1999 Table 2"}
+    # Sprint 13: UGT2B7 + CYP2C9 IVIVE underprediction correction.
+    # Diclofenac cleared ~55% by CYP2C9, ~25% by UGT2B7, ~20% other.
+    # HLM CLint captures CYP2C9 well but systematically underpredicts
+    # UGT2B7 contribution (UGT requires UDPGA cofactor often absent in
+    # standard HLM assays). Empirical multiplier derived from literature
+    # in vivo/in vitro CLint_u ratios for diclofenac specifically.
+    hepatic_clint_multiplier:
+      value: 3.5
+      source: literature
+      unit: ratio
+      method: "Miners 2006 Br J Clin Pharmacol 62:16 / Rowland 2013 Drug Metab Rev 45:381 / Obach 1999 DMD 27:1350 Table 3 — UGT2B7+CYP2C9 IVIVE gap for diclofenac 3-4x; 3.5 = midpoint"
   renal:
     clrenal_L_h: {value: 0.1, source: experimental, unit: L/h, method: "Obach 1999 Table 2"}
