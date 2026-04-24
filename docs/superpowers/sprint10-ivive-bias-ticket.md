@@ -41,3 +41,27 @@ Papp/Peff curation + oral route migration (Sprint 11), OATP transporter plumbing
 ## Tracking
 
 Filed at `docs/superpowers/sprint10-ivive-bias-ticket.md` during Sprint 9 closeout (2026-04-23, commit-TBD).
+
+## Status — Sprint 10 diagnostic merged (2026-04-23)
+
+Diagnostic produced at `validation/reports/layer3_ivive_decomposition.md`.
+
+**Aggregate attribution (n=12 Tier A):**
+- Liver-model choice: **4.9%** (analytical what-if; low because production PBPK ODE implicitly fixes well-stirred extraction — see §6 architectural note)
+- 1/F route bias (oral-reference vs IV-simulation mismatch): **42.1%**
+- Residual (unmodelled transporters, non-hepatic routes, UGT, model gaps): **137.2%** (exceeds 100% because signed factors partially cancel across compounds; atorvastatin alone contributes ~391x fold_residual)
+
+**Largest residuals (worst-unexplained):** atorvastatin (391x, OATP1B1), propranolol (~135x), verapamil, metoprolol, lisinopril (renal).
+
+**Investigation outcomes (vs original 5 candidates):**
+1. Per-compound error decomposition: **DONE** (full table in §2 of report).
+2. Alternate liver models for extreme fu_p: **DONE** (analytical what-if; aggregate effect modest at 4.9%, larger per-compound for high-extraction β-blockers and verapamil).
+3. Empirical F-correction lookup: **not applied** (per spec §3 non-goals — research report only; Sprint 11 will address F-bias via oral route migration, not lookup).
+4. Review target_ceff_nM values (lisinopril): **DONE** (§4 confirms 170 nM plausible, no change).
+5. Architectural note: **NEW FINDING** — Pipeline.liver_model is a no-op for the PBPK ODE (matches schema.py documented behaviour). Sprint 10 orchestrator works around this via analytical MRSD scaling.
+
+**Remediation tickets:**
+- Sprint 11 — Papp/Peff curation + oral route migration (next, high-priority, directly addresses 42% route_bias aggregate).
+- Sprint 12 — OATP1B1 plumbing (deferred, attributable to atorvastatin's dominant residual).
+- Sprint 13 — UGT / CYP2C9 calibration refresh (diclofenac residual).
+- §8 target remains FAILED at Sprint 9's honest 5/12 = 41.7%. Not revisited by Sprint 10.
