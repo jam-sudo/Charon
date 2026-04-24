@@ -67,3 +67,41 @@ class TestCompoundYamlsExist:
         names = {c["name"] for c in panel["compounds"]}
         for name in names:
             assert (compounds_dir / f"{name}.yaml").exists(), f"Missing compound YAML: {name}"
+
+
+def test_tier_a_compounds_have_permeability():
+    """Sprint 11: Tier A oral migration requires Peff or Papp in each
+    compound YAML."""
+    panel_path = Path(__file__).resolve().parents[2] / "validation" / "data" / "fih_reference" / "panel.yaml"
+    compounds_dir = Path(__file__).resolve().parents[2] / "validation" / "data" / "tier1_obach" / "compounds"
+    panel = yaml.safe_load(panel_path.read_text())["panel"]
+    tier_a_names = {c["name"] for c in panel["compounds"] if c["tier"] == "gold"}
+    missing = []
+    for name in sorted(tier_a_names):
+        yaml_path = compounds_dir / f"{name}.yaml"
+        data = yaml.safe_load(yaml_path.read_text())
+        perm = data.get("properties", {}).get("permeability", {})
+        peff_entry = perm.get("peff_cm_s")
+        papp_entry = perm.get("papp_nm_s")
+        has_peff = isinstance(peff_entry, dict) and peff_entry.get("value") is not None
+        has_papp = isinstance(papp_entry, dict) and papp_entry.get("value") is not None
+        if not (has_peff or has_papp):
+            missing.append(name)
+    assert not missing, (
+        f"Tier A compounds missing Peff/Papp: {missing}. "
+        f"Sprint 11 requires oral-route permeability data."
+    )
+
+
+def test_tier_a_panel_route_is_oral():
+    """Sprint 11: Tier A panel entries simulate oral route."""
+    panel_path = Path(__file__).resolve().parents[2] / "validation" / "data" / "fih_reference" / "panel.yaml"
+    panel = yaml.safe_load(panel_path.read_text())["panel"]
+    wrong_route = [
+        c["name"] for c in panel["compounds"]
+        if c["tier"] == "gold" and c["route"] != "oral"
+    ]
+    assert not wrong_route, (
+        f"Tier A compounds with non-oral route: {wrong_route}. "
+        f"Sprint 11 expects route=oral for all gold-tier entries."
+    )
