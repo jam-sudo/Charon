@@ -63,7 +63,12 @@ def test_csv_f_oral_numeric_or_blank_iv():
                 f"got {f_raw!r}"
             )
         else:
-            value = float(f_raw)
+            try:
+                value = float(f_raw)
+            except ValueError:
+                pytest.fail(
+                    f"{row['compound']}: f_oral is not numeric, got {f_raw!r}"
+                )
             assert 0.0 < value <= 1.0, (
                 f"{row['compound']}: f_oral must be in (0, 1], got {value}"
             )
