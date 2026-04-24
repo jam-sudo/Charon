@@ -23,6 +23,12 @@ properties:
     fu_p: {value: 0.80, source: experimental, unit: fraction, method: "Prescott 1980"}
     fu_inc: {value: 1.0, source: experimental, unit: fraction, method: "hepatocyte default"}
     bp_ratio: {value: 1.0, source: experimental, unit: ratio, method: "Prescott 1980"}
+  permeability:
+    peff_cm_s:
+      value: 3.1e-4
+      source: literature
+      unit: cm/s
+      method: "Winiwarter 1998 J Med Chem 41:4939; neutral amide, F~88-100% (essentially complete absorption)"
   metabolism:
     clint_uL_min_mg: {value: 5.0, source: experimental, unit: uL/min/mg, method: "Obach 2008 rescaled to HLM (hepatocellularity 120 × 10^6/g, MPPGL 40 mg/g)"}
   renal:

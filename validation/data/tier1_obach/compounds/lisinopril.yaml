@@ -23,6 +23,19 @@ properties:
     fu_p: {value: 0.75, source: experimental, unit: fraction, method: "Lancaster 1988"}
     fu_inc: {value: 1.0, source: experimental, unit: fraction, method: "hepatocyte default"}
     bp_ratio: {value: 0.85, source: experimental, unit: ratio, method: "Beermann 1988"}
+  permeability:
+    peff_cm_s:
+      value: 0.3e-4
+      source: literature
+      unit: cm/s
+      # CONFIDENCE: LOW. Lisinopril is BCS Class III (confirmed: high solubility,
+      # low permeability; F~25% is permeability-limited). It is a PEPT1 substrate
+      # (dipeptide-mimetic structure) but passive permeability is very low due to
+      # high polarity (logP=-1.22, zwitterion). The 0.3e-4 value reflects the
+      # passive component only; PEPT1-mediated transport is not captured in the
+      # ACAT model. Knutter 2008 is cited in task specification but the specific
+      # Peff value could not be verified from available sources; using compilation.
+      method: "Knutter 2008 J Pharmacol Exp Ther 327:432 (PEPT1 substrate); passive Peff compilation (BCS III, F~25%)"
   metabolism:
     clint_uL_min_mg: {value: 0.1, source: experimental, unit: uL/min/mg, method: "Beermann 1988 (negligible hepatic); physical minimum in HLM units"}
   renal:

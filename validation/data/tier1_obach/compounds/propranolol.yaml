@@ -17,6 +17,15 @@ properties:
     fu_p: {value: 0.13, source: experimental, unit: fraction, method: "Obach 1999 Table 2"}
     fu_inc: {value: 0.96, source: experimental, unit: fraction, method: "Obach 1999 Table 2"}
     bp_ratio: {value: 0.80, source: experimental, unit: ratio, method: "Obach 1999 Table 2"}
+  permeability:
+    peff_cm_s:
+      value: 2.9e-4
+      source: literature
+      unit: cm/s
+      # Lennernas 1997 (J Pharm Pharmacol 49:627) reports mean Peff 3.59±1.60e-4 cm/s
+      # by jejunal perfusion (Loc-I-Gut). Table value 2.9e-4 is within 1.24-fold of
+      # the reported mean, well within the ±1SD range. Accepted as consistent.
+      method: "Winiwarter 1998 J Med Chem 41:4939; confirmed by Lennernas 1997 J Pharm Pharmacol 49:627 (mean 3.59e-4 ± 1.60e-4)"
   metabolism:
     clint_uL_min_mg: {value: 13.6, source: experimental, unit: uL/min/mg, method: "Obach 1999 Table 2"}
   renal:

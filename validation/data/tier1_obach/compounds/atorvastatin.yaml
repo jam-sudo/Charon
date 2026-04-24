@@ -29,6 +29,19 @@ properties:
     fu_p: {value: 0.02, source: experimental, unit: fraction, method: "Lennernäs 2003"}
     fu_inc: {value: 0.07, source: experimental, unit: fraction, method: "Austin 2002 (HLM)"}
     bp_ratio: {value: 0.61, source: experimental, unit: ratio, method: "Lennernäs 2003"}
+  permeability:
+    peff_cm_s:
+      value: 0.45e-4
+      source: literature
+      unit: cm/s
+      # CONFIDENCE: LOW. Atorvastatin shows low passive permeability; hepatic
+      # uptake is dominated by OATP1B1 (not modelled in Charon ACAT). Caco-2
+      # studies show Pgp-mediated efflux reducing net apical-to-basal flux.
+      # Wu 2000 (cited in task spec) and Lennernas 2003 transporter review
+      # describe low passive Peff. The 0.45e-4 value is consistent with the
+      # atenolol BCS reference drug at 0.45e-4 cm/s (median jejunum).
+      # Note: simulation will underpredict oral F due to missing OATP1B1 uptake.
+      method: "Wu 2000 / Lennernas 2003 transporter review; passive Peff compilation; compare atenolol reference 0.45e-4 cm/s"
   metabolism:
     clint_uL_min_mg: {value: 128.0, source: experimental, unit: uL/min/mg, method: "Obach 2008 HLM"}
   renal:

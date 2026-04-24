@@ -25,6 +25,12 @@ properties:
     fu_p: {value: 0.012, source: experimental, unit: fraction, method: "Obach 1999 Table 2"}
     fu_inc: {value: 0.17, source: experimental, unit: fraction, method: "Obach 1999 Table 2"}
     bp_ratio: {value: 0.56, source: experimental, unit: ratio, method: "Obach 1999 Table 2"}
+  permeability:
+    peff_cm_s:
+      value: 3.8e-4
+      source: literature
+      unit: cm/s
+      method: "Fagerholm 1996 Pharm Res 13:1336 / Winiwarter 1998 J Med Chem 41:4939 compilation; lipophilic acid, high passive permeability"
   metabolism:
     clint_uL_min_mg: {value: 3.1, source: experimental, unit: uL/min/mg, method: "Obach 1999 Table 2"}
   renal:
