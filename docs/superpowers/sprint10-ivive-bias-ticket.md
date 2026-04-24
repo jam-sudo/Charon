@@ -128,3 +128,28 @@ Other 11 Tier A compounds unchanged (multiplier is atorvastatin-specific; no cro
 - lisinopril: fold 4.13x — non-hepatic elimination + low Peff
 
 §8 target is now satisfied with honest, principled remediation. Sprints 10→11→12 represent a clean diagnostic→remediation→mechanism-closure cycle starting from Sprint 9's FAILED 41.7%.
+
+## Sprint 13 (UGT/CYP2C9 correction for diclofenac) completed — 2026-04-24
+
+Added `hepatic_clint_multiplier: 3.5` to diclofenac.yaml (Miners 2006 Br J Clin Pharmacol 62:16 / Rowland 2013 Drug Metab Rev 45:381 / Obach 1999 DMD 27:1350 midpoint for UGT2B7+CYP2C9 IVIVE gap 3-4x). Reuses Sprint 12's infrastructure — no code changes.
+
+**Diclofenac delta:**
+- Sprint 12: MRSD 4.89 mg, fold 10.23x (outside 3x)
+- Sprint 13: MRSD 16.15 mg, fold 3.10x (outside 3x by 0.10x — honest close-but-not-quite outcome)
+
+**Layer 3 Tier A within-3x progression:**
+- Sprint 9:  5/12 = 41.7% (FAILED)
+- Sprint 11: 7/12 = 58.3% (FAILED by 2%)
+- Sprint 12: 8/12 = 66.7% (§8 PASSED)
+- Sprint 13: 8/12 = 66.7% (§8 still PASSED; diclofenac 10.23→3.10 is meaningful progress but does not cross 3x)
+
+Other 11 compounds show zero delta.
+
+**Decomposition:** aggregate residual 95.5% → 94.7% (small decrease reflects diclofenac's residual dropping from 10.23 to 2.99); liver_model 4.5% → 5.3%; route_bias 0.0% (unchanged).
+
+**Honest interpretation per spec §6.5:** Literature-supported multiplier 3.5 (midpoint of 3-4x) is pharmacologically sound but leaves diclofenac's fold at 3.10x — 0.10x above the 3x boundary. A multiplier of 4.0 (upper end of cited range) would close the gap but represents an editorial stretch, not midpoint evidence. Sprint 13 accepts the honest outcome rather than tuning.
+
+**Remaining unresolved gaps (Sprint 14+ targets):**
+- propranolol 28.55x — CYP2D6 + extensive first-pass (largest outlier)
+- diazepam 4.91x — very low fu_p sensitivity
+- lisinopril 4.13x — non-hepatic elimination + low Peff
