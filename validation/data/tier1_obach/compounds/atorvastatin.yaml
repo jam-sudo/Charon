@@ -1,0 +1,35 @@
+# Sprint 9 additions — atorvastatin (CYP3A4 + OATP1B1 substrate).
+#
+# Eliminated mainly by CYP3A4; hepatic uptake is OATP1B1-mediated (not
+# modelled in Charon). The compound is included as an honest stress
+# test — expected IVIVE overprediction due to missing transporter layer,
+# flagged in notes so the Tier A fold-error reading is interpreted
+# correctly.
+#
+# Primary references:
+#   - Obach 2008 human PK (CL = 39 L/h, Vss = 381 L)
+#   - Lennernäs 2003 (transporter review)
+#   - FDA Lipitor label (10 mg PO starting dose)
+name: atorvastatin
+smiles: "CC(C)c1c(C(=O)Nc2ccccc2)c(-c2ccccc2)c(-c2ccc(F)cc2)n1CC[C@@H](O)C[C@@H](O)CC(=O)O"
+molecular_weight: 558.64
+source: experimental
+properties:
+  physicochemical:
+    logp:
+      value: 6.36
+      source: experimental
+      method: "DrugBank DB01076"
+    compound_type: acid
+    pka_acid:
+      value: 4.46
+      source: experimental
+      method: "DrugBank DB01076"
+  binding:
+    fu_p: {value: 0.02, source: experimental, unit: fraction, method: "Lennernäs 2003"}
+    fu_inc: {value: 0.07, source: experimental, unit: fraction, method: "Austin 2002 (HLM)"}
+    bp_ratio: {value: 0.61, source: experimental, unit: ratio, method: "Lennernäs 2003"}
+  metabolism:
+    clint_uL_min_mg: {value: 128.0, source: experimental, unit: uL/min/mg, method: "Obach 2008 HLM"}
+  renal:
+    clrenal_L_h: {value: 0.0, source: experimental, unit: L/h, method: "Lennernäs 2003 (<2% renal)"}
