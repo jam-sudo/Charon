@@ -1,12 +1,12 @@
 {
   "title": "Charon Layer 3 FIH Dose Benchmark",
   "panel": "charon_sprint7_fih",
-  "date_utc": "2026-04-23T08:09:12.581482+00:00",
+  "date_utc": "2026-04-24T01:05:05.698222+00:00",
   "summary": {
-    "gold_n": 5,
-    "gold_within_3x": 3,
-    "gold_within_3x_fraction": 0.6,
-    "gold_within_10x": 4,
+    "gold_n": 12,
+    "gold_within_3x": 5,
+    "gold_within_3x_fraction": 0.4166666666666667,
+    "gold_within_10x": 8,
     "sanity_n": 12,
     "sanity_pass_count": 12,
     "sanity_pass_fraction": 1.0,
@@ -74,6 +74,90 @@
         "within_3x": true,
         "within_10x": true,
         "source": "NDA 19-810 (Prilosec), standard 20 mg PO OD"
+      },
+      {
+        "compound": "theophylline",
+        "route": "iv_bolus",
+        "mrsd_pred_mg": 85.2121561715791,
+        "limiting_method": "pad",
+        "reference_fih_mg": 100.0,
+        "source_type": "label_start",
+        "fold_error": 1.1735414815539325,
+        "within_3x": true,
+        "within_10x": true,
+        "source": "FDA label (Theo-24), initial PO 100-200 mg"
+      },
+      {
+        "compound": "diclofenac",
+        "route": "iv_bolus",
+        "mrsd_pred_mg": 4.2646784101254145,
+        "limiting_method": "pad",
+        "reference_fih_mg": 50.0,
+        "source_type": "label_start",
+        "fold_error": 11.724213455647085,
+        "within_3x": false,
+        "within_10x": false,
+        "source": "FDA Voltaren label, 50 mg PO TID initial"
+      },
+      {
+        "compound": "diazepam",
+        "route": "iv_bolus",
+        "mrsd_pred_mg": 0.3260714617306632,
+        "limiting_method": "pad",
+        "reference_fih_mg": 2.0,
+        "source_type": "label_start",
+        "fold_error": 6.133624786986145,
+        "within_3x": false,
+        "within_10x": true,
+        "source": "FDA Valium label, 2-10 mg PO initial"
+      },
+      {
+        "compound": "metoprolol",
+        "route": "iv_bolus",
+        "mrsd_pred_mg": 6.894904184705377,
+        "limiting_method": "pad",
+        "reference_fih_mg": 50.0,
+        "source_type": "label_start",
+        "fold_error": 7.251732389684618,
+        "within_3x": false,
+        "within_10x": true,
+        "source": "FDA Lopressor label, 50 mg PO BID initial"
+      },
+      {
+        "compound": "acetaminophen",
+        "route": "iv_bolus",
+        "mrsd_pred_mg": 287.35529129939533,
+        "limiting_method": "pad",
+        "reference_fih_mg": 500.0,
+        "source_type": "label_start",
+        "fold_error": 1.7400062401462804,
+        "within_3x": true,
+        "within_10x": true,
+        "source": "FDA OTC Monograph 21 CFR 343, 325-650 mg q4-6h"
+      },
+      {
+        "compound": "lisinopril",
+        "route": "iv_bolus",
+        "mrsd_pred_mg": 0.748245206024895,
+        "limiting_method": "pad",
+        "reference_fih_mg": 10.0,
+        "source_type": "label_start",
+        "fold_error": 13.364602832707343,
+        "within_3x": false,
+        "within_10x": false,
+        "source": "FDA Prinivil label, 5-10 mg PO OD initial"
+      },
+      {
+        "compound": "atorvastatin",
+        "route": "iv_bolus",
+        "mrsd_pred_mg": 0.14107131253256686,
+        "limiting_method": "pad",
+        "reference_fih_mg": 10.0,
+        "source_type": "label_start",
+        "fold_error": 70.88613425703728,
+        "within_3x": false,
+        "within_10x": false,
+        "source": "FDA Lipitor label, 10 mg PO OD initial"
       }
     ],
     "Sanity floor (Tier B) \u2014 MRSD <= approved starting dose": [

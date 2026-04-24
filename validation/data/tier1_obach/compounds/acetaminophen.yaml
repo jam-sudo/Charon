@@ -1,0 +1,29 @@
+# Sprint 9 additions — acetaminophen (paracetamol).
+#
+# Eliminated primarily by UGT (sulfate and glucuronide conjugation) with
+# minor CYP2E1 contribution. Included in the Tier A panel to diversify
+# elimination-pathway coverage beyond the Obach-12 CYP bias.
+#
+# Primary references:
+#   - Obach 2008 human PK predictions table (CL = 21.6 L/h, Vss = 63 L)
+#   - Prescott 1980 (fu_p = 0.80)
+#   - FDA OTC Monograph 21 CFR 343 (starting dose 325-650 mg q4-6h)
+name: acetaminophen
+smiles: "CC(=O)Nc1ccc(O)cc1"
+molecular_weight: 151.16
+source: experimental
+properties:
+  physicochemical:
+    logp:
+      value: 0.46
+      source: experimental
+      method: "Obach 2008"
+    compound_type: neutral
+  binding:
+    fu_p: {value: 0.80, source: experimental, unit: fraction, method: "Prescott 1980"}
+    fu_inc: {value: 1.0, source: experimental, unit: fraction, method: "hepatocyte default"}
+    bp_ratio: {value: 1.0, source: experimental, unit: ratio, method: "Prescott 1980"}
+  metabolism:
+    clint_uL_min_mg: {value: 5.0, source: experimental, unit: uL/min/mg, method: "Obach 2008 rescaled to HLM (hepatocellularity 120 × 10^6/g, MPPGL 40 mg/g)"}
+  renal:
+    clrenal_L_h: {value: 2.0, source: experimental, unit: L/h, method: "Prescott 1980 (~4% unchanged)"}

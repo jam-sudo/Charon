@@ -18,13 +18,13 @@ def test_top_level_fields(panel):
     assert panel["name"] == "charon_sprint7_fih"
     assert panel["version"] == 1
     assert isinstance(panel["compounds"], list)
-    assert len(panel["compounds"]) >= 15
+    assert len(panel["compounds"]) >= 22
 
 
 class TestGoldTier:
-    def test_at_least_five_gold(self, panel):
+    def test_at_least_twelve_gold(self, panel):
         gold = [c for c in panel["compounds"] if c["tier"] == "gold"]
-        assert len(gold) >= 5
+        assert len(gold) >= 12
 
     def test_gold_has_reference_fih(self, panel):
         for c in panel["compounds"]:

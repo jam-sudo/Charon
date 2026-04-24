@@ -1,0 +1,29 @@
+# Sprint 9 additions — lisinopril (ACE inhibitor, renal-dominant).
+#
+# Essentially not metabolised hepatically (CLint ≈ 0); eliminated almost
+# entirely by renal excretion of unchanged drug. Chosen to stress-test
+# the PAD path when the hepatic clearance contribution is zero.
+#
+# Primary references:
+#   - Beermann 1988 human PK (CL_total ≈ 5.1 L/h; renal CL > 95%)
+#   - FDA Prinivil label (starting 5-10 mg PO OD)
+#   - Lancaster 1988 (fu_p ≈ 0.75, low binding)
+name: lisinopril
+smiles: "C1CC(N(C1)C(=O)C(CCCCN)NC(CCC2=CC=CC=C2)C(=O)O)C(=O)O"
+molecular_weight: 405.49
+source: experimental
+properties:
+  physicochemical:
+    logp:
+      value: -1.22
+      source: experimental
+      method: "DrugBank DB00722 experimental logP"
+    compound_type: zwitterion
+  binding:
+    fu_p: {value: 0.75, source: experimental, unit: fraction, method: "Lancaster 1988"}
+    fu_inc: {value: 1.0, source: experimental, unit: fraction, method: "hepatocyte default"}
+    bp_ratio: {value: 0.85, source: experimental, unit: ratio, method: "Beermann 1988"}
+  metabolism:
+    clint_uL_min_mg: {value: 0.1, source: experimental, unit: uL/min/mg, method: "Beermann 1988 (negligible hepatic); physical minimum in HLM units"}
+  renal:
+    clrenal_L_h: {value: 5.0, source: experimental, unit: L/h, method: "Beermann 1988 (~100% renal)"}

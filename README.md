@@ -123,17 +123,21 @@ CLint was excluded from the Layer 1 benchmark because Charon predicts in hepatoc
 
 Full results: [Layer 2 report](validation/reports/layer2_human_pk.md)
 
-### Layer 3 -- FIH dose (Sprint 7 baseline)
+### Layer 3 -- FIH dose (Sprint 9, n=12)
 
-Two-tier benchmark against `validation/data/fih_reference/panel.yaml`. All compounds run as `iv_bolus` because the reused Obach YAMLs lack absorption data; reference doses are daily oral equivalents, so Tier A fold-errors carry a `1/F` bias and Tier B is conservative.
+Two-tier benchmark against `validation/data/fih_reference/panel.yaml`. All compounds run as `iv_bolus` because the reused compound YAMLs lack absorption data; reference doses are daily oral equivalents, so Tier A fold-errors carry a `1/F` bias and Tier B is conservative.
 
 | Tier | Metric | Result | §8 target |
 | --- | --- | --- | --- |
-| Gold (n=5) | Within-3-fold of reference FIH dose | 3/5 (60%) | >= 60% [PASS] |
-| Gold (n=5) | Within-10-fold of reference FIH dose | 4/5 (80%) | -- |
+| Gold (n=12) | Within-3-fold of reference FIH dose | 5/12 (41.7%) | >= 60% [FAIL] |
+| Gold (n=12) | Within-10-fold of reference FIH dose | 8/12 (66.7%) | -- |
 | Sanity (n=12) | MRSD <= approved starting dose | 12/12 (100%) | gated [PASS] |
 
-Tier A misses: `propranolol` (fold 36x; high-F-variance beta-blocker) and `verapamil` (fold 8x, within 10x; CYP3A4 first-pass bias). MRSD computed via PAD path with `safety_factor=10`.
+Panel composition: 5 core (Sprint 7) + 4 Obach promotions (theophylline, diclofenac, diazepam, metoprolol) + 3 elimination-diversity additions (acetaminophen UGT, lisinopril renal, atorvastatin CYP3A4+OATP).
+
+**§8 target not met** at the widened panel. Honest reading: high-F-variance oral beta-blockers (propranolol 36x, metoprolol 7x), transporter-limited compounds (atorvastatin 71x — OATP1B1 unmodelled), non-hepatic elimination (lisinopril 13x), and very-low fu_p compounds (diazepam 6x — well-stirred sensitivity) drag the within-3x fraction below 60%. Tracked for Sprint 10 IVIVE-bias investigation: `docs/superpowers/sprint10-ivive-bias-ticket.md`. The Tier B sanity-floor gate (12/12 pass) is unaffected.
+
+Tier A passes (within 3x): midazolam (1.7x), warfarin (1.0x), omeprazole (1.5x), theophylline (1.2x), acetaminophen (1.7x). MRSD computed via PAD path with `safety_factor=10`.
 
 Full results: [Layer 3 report](validation/reports/layer3_fih_dose.md).
 
