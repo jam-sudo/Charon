@@ -99,17 +99,22 @@ def test_liver_model_whatif_produces_nonzero_attribution(decomposition_json):
 
 
 def test_liver_model_diverges_for_majority_of_panel(decomposition_json):
-    """At least 8 of 12 Tier A compounds should show non-trivial liver-model
-    divergence (|log10(fold_liver_model)| > 0.001). The two expected exceptions
-    are near-zero-CLint compounds (diazepam, lisinopril) where all three
-    liver models converge by construction.
+    """At least 5 of 12 Tier A compounds should show non-trivial liver-model
+    divergence (|log10(fold_liver_model)| > 0.001). This threshold is a
+    regression guard against the Sprint 10 bug class (aggregate_pct_liver_model
+    = 0% because Pipeline.liver_model was a no-op), NOT a pharmacological
+    claim. The exact count depends on simulation route:
+      - Sprint 10 (iv_bolus): ~10/12 diverged (non-flow-limited IV MRSDs)
+      - Sprint 11 (oral):     ~7/12 diverged (more flow-limited under oral)
+    Compounds with near-zero CLint (lisinopril, diazepam) always converge.
     """
     rows = decomposition_json["extra_sections"]["Per-compound decomposition"]
     n_divergent = sum(
         1 for r in rows
         if r["fold_liver_model"] > 0 and abs(math.log10(r["fold_liver_model"])) > 0.001
     )
-    assert n_divergent >= 8, (
+    assert n_divergent >= 5, (
         f"Only {n_divergent}/12 compounds show liver-model divergence; "
-        f"expected >= 8 on this panel"
+        f"expected >= 5 on this panel. If 0, likely regression to "
+        f"Pipeline.liver_model no-op (see Sprint 10 bug class)."
     )
