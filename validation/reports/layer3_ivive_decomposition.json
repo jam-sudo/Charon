@@ -1,12 +1,12 @@
 {
   "title": "Charon Sprint 10 \u2014 Tier A IVIVE Fold-Error Decomposition",
   "panel": "charon_sprint7_fih",
-  "date_utc": "2026-04-24T15:41:02.382549+00:00",
+  "date_utc": "2026-04-24T17:24:08.353705+00:00",
   "summary": {
     "n_compounds": 12,
-    "aggregate_pct_liver_model": 4.526608133990374,
+    "aggregate_pct_liver_model": 5.256058143174699,
     "aggregate_pct_route_bias": 0.0,
-    "aggregate_pct_residual": 95.47529401400328
+    "aggregate_pct_residual": 94.74605525021602
   },
   "rows": [],
   "extra_sections": {
@@ -36,32 +36,6 @@
         "flags": "-",
         "f_source": "Wood 1978",
         "notes": "Extensive first-pass; F 15-40% range; 0.26 = median"
-      },
-      {
-        "compound": "diclofenac",
-        "mrsd_ws_mg": 4.889706852932625,
-        "mrsd_pt_mg": 4.9386719157807475,
-        "mrsd_disp_mg": 4.924731837207083,
-        "clh_ws_L_h": 2.073494917904613,
-        "clh_pt_L_h": 2.09526009083956,
-        "clh_disp_L_h": 2.0890636682632495,
-        "cl_renal_L_h": 0.1,
-        "reference_fih_mg": 50.0,
-        "fih_reference_route": "oral",
-        "simulation_route": "oral",
-        "reference_route": "oral",
-        "f_lit": 0.54,
-        "fold_observed_signed": 0.0977941370586525,
-        "fold_liver_model_signed": 0.9900853784816801,
-        "fold_route_bias": 1.0,
-        "fold_residual_signed": 0.09877343831561494,
-        "fold_observed": 10.225561880056727,
-        "fold_liver_model": 1.0100139056022868,
-        "fold_residual": 10.124179304203805,
-        "best_alt_model": "parallel_tube",
-        "flags": "-",
-        "f_source": "Willis 1979",
-        "notes": "F 0.54 after oral tablet; subject to enterohepatic recirculation"
       },
       {
         "compound": "diazepam",
@@ -114,6 +88,32 @@
         "flags": "-",
         "f_source": "Beermann 1988",
         "notes": "Low GI absorption; F 0.25-0.29 reported range"
+      },
+      {
+        "compound": "diclofenac",
+        "mrsd_ws_mg": 16.151001913302224,
+        "mrsd_pt_mg": 16.715580730610405,
+        "mrsd_disp_mg": 16.551752310645394,
+        "clh_ws_L_h": 6.89769630914045,
+        "clh_pt_L_h": 7.14230968528292,
+        "clh_disp_L_h": 7.0713282355948195,
+        "cl_renal_L_h": 0.1,
+        "reference_fih_mg": 50.0,
+        "fih_reference_route": "oral",
+        "simulation_route": "oral",
+        "reference_route": "oral",
+        "f_lit": 0.54,
+        "fold_observed_signed": 0.3230200382660445,
+        "fold_liver_model_signed": 0.9662243970815626,
+        "fold_route_bias": 1.0,
+        "fold_residual_signed": 0.3343116146122081,
+        "fold_observed": 3.0957831760777146,
+        "fold_liver_model": 1.0349562720838503,
+        "fold_residual": 2.9912212328009344,
+        "best_alt_model": "parallel_tube",
+        "flags": "-",
+        "f_source": "Willis 1979",
+        "notes": "F 0.54 after oral tablet; subject to enterohepatic recirculation"
       },
       {
         "compound": "verapamil",

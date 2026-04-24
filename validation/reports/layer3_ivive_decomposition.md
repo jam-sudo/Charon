@@ -1,6 +1,6 @@
 # Charon Sprint 10 — Tier A IVIVE Fold-Error Decomposition
 
-**Generated:** 2026-04-24T15:41:02.382549+00:00
+**Generated:** 2026-04-24T17:24:08.353705+00:00
 **Panel:** charon_sprint7_fih
 
 ## Summary
@@ -8,9 +8,9 @@
 | key | value |
 | --- | --- |
 | n_compounds | 12 |
-| aggregate_pct_liver_model | 4.527 |
+| aggregate_pct_liver_model | 5.256 |
 | aggregate_pct_route_bias | 0.000 |
-| aggregate_pct_residual | 95.48 |
+| aggregate_pct_residual | 94.75 |
 
 ## Results
 
@@ -21,9 +21,9 @@
 | compound | mrsd_ws_mg | mrsd_pt_mg | mrsd_disp_mg | clh_ws_L_h | clh_pt_L_h | clh_disp_L_h | cl_renal_L_h | reference_fih_mg | fih_reference_route | simulation_route | reference_route | f_lit | fold_observed_signed | fold_liver_model_signed | fold_route_bias | fold_residual_signed | fold_observed | fold_liver_model | fold_residual | best_alt_model | flags | f_source | notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | propranolol | 0.3502 | 0.3638 | 0.3599 | 7.65 | 7.952 | 7.864 | 0.1 | 10 | oral | oral | oral | 0.26 | 0.03502 | 0.9625 | 1 | 0.03638 | 28.55 | 1.039 | 27.49 | parallel_tube | - | Wood 1978 | Extensive first-pass; F 15-40% range; 0.26 = median |
-| diclofenac | 4.89 | 4.939 | 4.925 | 2.073 | 2.095 | 2.089 | 0.1 | 50 | oral | oral | oral | 0.54 | 0.09779 | 0.9901 | 1 | 0.09877 | 10.23 | 1.01 | 10.12 | parallel_tube | - | Willis 1979 | F 0.54 after oral tablet; subject to enterohepatic recirculation |
 | diazepam | 0.4074 | 0.4074 | 0.4074 | 0.04454 | 0.04455 | 0.04455 | 0.000 | 2 | oral | oral | oral | 0.93 | 0.2037 | 0.9998 | 1 | 0.2037 | 4.91 | 1 | 4.909 | parallel_tube | - | Greenblatt 1980 | F 0.90-1.00 oral vs IV cross-over |
 | lisinopril | 2.424 | 2.424 | 2.424 | 0.3166 | 0.3171 | 0.317 | 5 | 10 | oral | oral | oral | 0.25 | 0.2424 | 0.9999 | 1 | 0.2424 | 4.126 | 1 | 4.126 | parallel_tube | - | Beermann 1988 | Low GI absorption; F 0.25-0.29 reported range |
+| diclofenac | 16.15 | 16.72 | 16.55 | 6.898 | 7.142 | 7.071 | 0.1 | 50 | oral | oral | oral | 0.54 | 0.323 | 0.9662 | 1 | 0.3343 | 3.096 | 1.035 | 2.991 | parallel_tube | - | Willis 1979 | F 0.54 after oral tablet; subject to enterohepatic recirculation |
 | verapamil | 16.05 | 20.05 | 18.73 | 46.3 | 57.83 | 54.03 | 0.000 | 40 | oral | oral | oral | 0.22 | 0.4013 | 0.8006 | 1 | 0.5012 | 2.492 | 1.249 | 1.995 | parallel_tube | - | Eichelbaum 1981 | High first-pass; F 10-35% range; 0.22 = median single-dose |
 | metoprolol | 23.53 | 28.55 | 26.92 | 39.92 | 48.59 | 45.77 | 0.7 | 50 | oral | oral | oral | 0.5 | 0.4706 | 0.8241 | 1 | 0.571 | 2.125 | 1.213 | 1.751 | parallel_tube | - | Regardh 1980 | F 0.40-0.60 range; 0.50 = midpoint of extensive metabolizers |
 | atorvastatin | 16.98 | 17.96 | 17.95 | 94.03 | 99.45 | 99.42 | 0.000 | 10 | oral | oral | oral | 0.14 | 1.698 | 1 | 1 | 1.698 | 1.698 | 1 | 1.698 | well_stirred | - | Lennernas 2003 | F ~0.14 reflects OATP1B1 hepatic uptake + CYP3A4 first-pass |
@@ -45,18 +45,24 @@
 - Pipeline.liver_model is a no-op for the PBPK ODE; only one Pipeline run per compound.
 - Research only — no production code changes.
 
-## §8. Sprint 12 — OATP enhancement for atorvastatin
+## §9. Sprint 13 — UGT/CYP2C9 correction for diclofenac
 
-After adding `hepatic_clint_multiplier: 8.0` to atorvastatin.yaml (Izumi 2018 literature midpoint for OATP1B1 substrate IVIVE gap), the decomposition re-runs with:
+After `hepatic_clint_multiplier: 3.5` added to diclofenac.yaml (Miners 2006 / Rowland 2013 / Obach 1999 midpoint):
 
-- liver_model: 4.5% (unchanged — liver model choice is not the dominant error source)
-- route_bias:  0.0% (still near 0 — oral route simulation unchanged)
-- residual:    95.5% (decreased because atorvastatin's residual dropped from 4.64 to 1.70)
+- liver_model: 5.3%
+- route_bias:  0.0%
+- residual:    94.7%
 
-Atorvastatin per-compound:
-- Sprint 11 fold_residual: 4.64 (expected OATP gap)
-- Sprint 12 fold_residual: 1.698 (WITHIN 3x)
+Diclofenac per-compound:
+- Sprint 12 fold_residual: 10.23
+- Sprint 13 fold_residual: 2.991 (OUTSIDE_3X at fold_observed 3.096 — residual < 3.0 but observed fold just above boundary due to liver-model factor 1.035)
 
-This confirms the hypothesis that atorvastatin's Sprint 11 residual was dominated by the OATP1B1 IVIVE gap. The remaining residual (fold 1.70) after enhancement represents biliary clearance, Pgp efflux, or other unmodelled mechanisms — well within acceptable range for a single-point PAD estimate.
+The multiplier treats combined CYP2C9 + UGT2B7 hepatic clearance as a single enhanced path (empirical — analogous to Sprint 12 OATP1B1 for atorvastatin). Residual after enhancement represents either:
+- Biliary excretion (diclofenac undergoes enterohepatic recirculation)
+- Minor CYP3A4/CYP2C8 pathways
+- Multiplier choice slightly off the actual in vivo gap
 
-Sprint 13 (UGT/CYP2C9 — diclofenac, fold 10.23) and Sprint 14 (CYP2D6 — propranolol, fold 28.55) remain the largest unresolved mechanistic gaps.
+Largest remaining residual after Sprint 13:
+- propranolol 28.55x — CYP2D6 + extensive first-pass (Sprint 14 target)
+- diazepam 4.91x — very low fu_p sensitivity
+- lisinopril 4.13x — non-hepatic elimination
