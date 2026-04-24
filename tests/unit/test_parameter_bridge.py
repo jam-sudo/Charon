@@ -185,3 +185,90 @@ class TestHepaticClearanceClintLiverField:
         )
         # Hand calc: 10.0 * 120 * 1500 / 1e6 * 60 = 108.0 L/h
         assert result.clint_liver_L_h == pytest.approx(108.0, rel=1e-6)
+
+
+def test_clint_multiplier_default_none_matches_baseline():
+    """With clint_multiplier=None, result matches the baseline CLh."""
+    from charon.core.parameter_bridge import ParameterBridge
+
+    bridge = ParameterBridge()
+    result_none = bridge.clint_to_clh(
+        clint=100.0, fu_inc=0.5, fu_p=0.1, system="HLM",
+    )
+    result_one = bridge.clint_to_clh(
+        clint=100.0, fu_inc=0.5, fu_p=0.1, system="HLM",
+        clint_multiplier=1.0,
+    )
+    assert abs(result_none.clh_L_h - result_one.clh_L_h) < 1e-12
+
+
+def test_clint_multiplier_scales_clint_liver():
+    """clint_multiplier=8.0 scales CLint_liver 8x before the liver model.
+    For a LOW-extraction case, CLh scales near-linearly with the multiplier."""
+    from charon.core.parameter_bridge import ParameterBridge
+
+    bridge = ParameterBridge()
+    # Low extraction: fu_b*CLint_liver << Qh (use low clint + low fu_p)
+    r_base = bridge.clint_to_clh(
+        clint=1.0, fu_inc=0.5, fu_p=0.1, system="HLM",
+    )
+    r_enhanced = bridge.clint_to_clh(
+        clint=1.0, fu_inc=0.5, fu_p=0.1, system="HLM",
+        clint_multiplier=8.0,
+    )
+    ratio = r_enhanced.clh_L_h / r_base.clh_L_h
+    assert 7.0 < ratio < 8.1, f"CLh ratio {ratio:.3f} outside [7.0, 8.1]"
+
+
+def test_clint_multiplier_raises_on_non_positive():
+    """clint_multiplier <= 0 raises ValueError."""
+    from charon.core.parameter_bridge import ParameterBridge
+
+    bridge = ParameterBridge()
+    with pytest.raises(ValueError, match="clint_multiplier"):
+        bridge.clint_to_clh(
+            clint=100.0, fu_inc=0.5, fu_p=0.1, system="HLM",
+            clint_multiplier=0.0,
+        )
+    with pytest.raises(ValueError, match="clint_multiplier"):
+        bridge.clint_to_clh(
+            clint=100.0, fu_inc=0.5, fu_p=0.1, system="HLM",
+            clint_multiplier=-2.0,
+        )
+
+
+def test_clint_multiplier_conversion_log_contains_enhancement_step():
+    """When multiplier is applied (>0 and !=1.0), intermediate_steps contains
+    an entry named 'clint_enhancement' with the multiplier in the formula."""
+    from charon.core.parameter_bridge import ParameterBridge
+
+    bridge = ParameterBridge()
+    result = bridge.clint_to_clh(
+        clint=100.0, fu_inc=0.5, fu_p=0.1, system="HLM",
+        clint_multiplier=8.0,
+    )
+    step_names = [s.name for s in result.conversion_log.intermediate_steps]
+    assert "clint_enhancement" in step_names
+
+    step = next(
+        s for s in result.conversion_log.intermediate_steps
+        if s.name == "clint_enhancement"
+    )
+    assert "8.0" in step.formula or "8" in step.formula
+
+
+def test_clint_multiplier_default_no_enhancement_step():
+    """clint_multiplier=None or 1.0 does NOT emit the enhancement step."""
+    from charon.core.parameter_bridge import ParameterBridge
+
+    bridge = ParameterBridge()
+    r_none = bridge.clint_to_clh(
+        clint=100.0, fu_inc=0.5, fu_p=0.1, system="HLM",
+    )
+    r_one = bridge.clint_to_clh(
+        clint=100.0, fu_inc=0.5, fu_p=0.1, system="HLM",
+        clint_multiplier=1.0,
+    )
+    for r in (r_none, r_one):
+        step_names = [s.name for s in r.conversion_log.intermediate_steps]
+        assert "clint_enhancement" not in step_names
