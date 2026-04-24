@@ -69,6 +69,18 @@ def test_select_best_alternate_falls_back_to_well_stirred_when_no_improvement():
     assert mrsd == 5.0
 
 
+def test_select_best_alternate_tie_break_prefers_parallel_tube():
+    # pt=3, disp=3, ref=5 — both equidistant at |log10(3/5)|=0.222
+    # Tie-break must prefer parallel_tube (stable sort, listed first).
+    # ws=4 is still closer (|log10(4/5)|=0.097) so that wins overall;
+    # construct case where pt==disp and both beat ws.
+    name, mrsd = select_best_alternate_liver_model(
+        ws=100.0, pt=3.0, disp=3.0, reference=5.0
+    )
+    assert name == "parallel_tube"
+    assert mrsd == 3.0
+
+
 # ---------------------------------------------------------------------------
 # compute_route_bias_factor
 # ---------------------------------------------------------------------------
@@ -77,28 +89,28 @@ def test_route_bias_iv_reference_returns_unity():
     # IV reference: no 1/F bias exists, factor=1.0, no flags
     factor, flags = compute_route_bias_factor(route_ref="iv", f_lit=None)
     assert factor == 1.0
-    assert flags == []
+    assert flags == ()
 
 
 def test_route_bias_iv_reference_ignores_f_lit():
     # Even if f_lit supplied, IV route means factor=1.0
     factor, flags = compute_route_bias_factor(route_ref="iv", f_lit=0.3)
     assert factor == 1.0
-    assert flags == []
+    assert flags == ()
 
 
 def test_route_bias_oral_with_known_f():
     # propranolol F=0.26 -> factor = 1/0.26 = 3.846...
     factor, flags = compute_route_bias_factor(route_ref="oral", f_lit=0.26)
     assert factor == pytest.approx(1.0 / 0.26, rel=1e-9)
-    assert flags == []
+    assert flags == ()
 
 
 def test_route_bias_oral_with_unknown_f_flags():
     # Oral reference but no F literature -> factor=1.0 + flag
     factor, flags = compute_route_bias_factor(route_ref="oral", f_lit=None)
     assert factor == 1.0
-    assert flags == ["f_unknown"]
+    assert flags == ("f_unknown",)
 
 
 # ---------------------------------------------------------------------------
@@ -148,7 +160,7 @@ def test_decompose_concrete_signed_values():
     assert result.fold_route_bias == pytest.approx(2.0, rel=1e-12)
     assert result.fold_residual_signed == pytest.approx(0.5, rel=1e-12)
     assert result.best_alt_model_name == "parallel_tube"
-    assert result.flags == []
+    assert result.flags == ()
 
 
 def test_decompose_iv_reference_no_route_factor():

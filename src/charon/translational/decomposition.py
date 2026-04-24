@@ -60,7 +60,7 @@ class DecompositionResult:
     fold_route_bias: float
     fold_residual_signed: float
     best_alt_model_name: str
-    flags: list[str] = field(default_factory=list)
+    flags: tuple[str, ...] = field(default_factory=tuple)
 
 
 def to_symmetric(signed: float) -> float:
@@ -86,8 +86,10 @@ def select_best_alternate_liver_model(
     returns ("well_stirred", ws) — meaning no attributable improvement
     from liver-model choice.
 
-    Tie-break when alternates equally close: prefer parallel_tube (lexical).
+    Tie-break when alternates equally close: `parallel_tube` wins (it is listed first in a stable-sort, not alphabetical order).
     """
+    if ws <= 0:
+        raise ValueError(f"ws must be > 0, got {ws}")
     if reference <= 0:
         raise ValueError(f"reference must be > 0, got {reference}")
     candidates = {
@@ -114,23 +116,23 @@ def select_best_alternate_liver_model(
 def compute_route_bias_factor(
     route_ref: Literal["iv", "oral"],
     f_lit: float | None,
-) -> tuple[float, list[str]]:
+) -> tuple[float, tuple[str, ...]]:
     """Return (factor, flags) for the 1/F route-mismatch attribution.
 
-    IV reference → (1.0, []). Oral + known F → (1/F, []). Oral + unknown F
-    → (1.0, ["f_unknown"]).
+    IV reference → (1.0, ()). Oral + known F → (1/F, ()). Oral + unknown F
+    → (1.0, ("f_unknown",)).
     """
     if route_ref not in ("iv", "oral"):
         raise ValueError(
             f"route_ref must be 'iv' or 'oral', got {route_ref!r}"
         )
     if route_ref == "iv":
-        return 1.0, []
+        return 1.0, ()
     if f_lit is None:
-        return 1.0, ["f_unknown"]
+        return 1.0, ("f_unknown",)
     if f_lit <= 0 or f_lit > 1.0:
         raise ValueError(f"f_lit must be in (0, 1], got {f_lit}")
-    return 1.0 / f_lit, []
+    return 1.0 / f_lit, ()
 
 
 def decompose_fold_error(
@@ -166,6 +168,10 @@ def decompose_fold_error(
             f"mrsd_ws and fih_reference_mg must be > 0, "
             f"got {mrsd_ws}, {fih_reference_mg}"
         )
+    if mrsd_pt <= 0 or mrsd_disp <= 0:
+        raise ValueError(
+            f"mrsd_pt and mrsd_disp must be > 0, got {mrsd_pt}, {mrsd_disp}"
+        )
 
     fold_obs_signed = mrsd_ws / fih_reference_mg
 
@@ -189,5 +195,5 @@ def decompose_fold_error(
         fold_route_bias=fold_route,
         fold_residual_signed=fold_residual_signed,
         best_alt_model_name=best_alt_name,
-        flags=list(flags),
+        flags=tuple(flags),
     )
