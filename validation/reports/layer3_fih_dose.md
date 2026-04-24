@@ -91,3 +91,20 @@ Multiplier applied: 3.5 (Miners 2006 / Rowland 2013 / Obach 1999 midpoint for UG
 Other 11 compounds show zero delta (multiplier is diclofenac-scoped; all ratios within ±0.3%).
 
 **Interpretation:** Meaningful improvement from 10.23x, but diclofenac's fold sits at ~3.1x — just outside the 3x boundary. §8 target remains PASSED at 8/12. A more aggressive multiplier (4.0) would close the gap but exceeds the literature-supported midpoint (3.5). Honest reporting per spec §6.5.
+
+## Sprint 14 audit — diazepam (null result, 2026-04-24)
+
+Parameter audit of diazepam's stored values against primary literature (Greenblatt 1981 PMID:6790582; Jones & Larsson 2004 PMID:15257067; Obach 1999 DMD 27:1350 Table 2):
+
+| Parameter | Stored | Literature | Verdict |
+|---|---|---|---|
+| `target_ceff_nM` | 1800 nM (≈513 ng/mL total Cp) | Therapeutic range 200-600 ng/mL (Greenblatt 1980 / Mandelli 1978); Greenblatt 1981 long-term SS mean ~329 ng/mL | WITHIN RANGE |
+| `clint_uL_min_mg` | 0.37 | Obach 1999 Table 2 (authoritative) | EXACT MATCH |
+| `fu_p` | 0.013 | Greenblatt 1981 pooled mean 0.0148 (range 0.0085-0.0230, n=62) | WITHIN RANGE (1.14x below mean) |
+| `bp_ratio` | 0.58 | 0.51-0.59 (Jones & Larsson 2004 PMID:15257067; independent 2022 PBPK model uses exactly 0.58) | EXACT MATCH |
+
+No parameter corrections warranted. No primary-literature source explicitly documents a diazepam-specific in vivo/in vitro CLint ratio ≈ 2x — Branch C (conservative multiplier) does not qualify under the honest-evidence standard.
+
+**Conclusion:** Diazepam's 4.91x residual is IRREDUCIBLE at the current framework. Closure requires architectural work — most likely extended-clearance model handling for extreme-low-fu_p substrates (fu_p=0.013 sits at the well-stirred model's sensitivity boundary) or Vss overprediction investigation (documented in Sprint 3b-1.5 as a known R&R Kp issue for lipophilic neutral drugs).
+
+§8 target remains PASSED at 8/12 = 66.7% (unchanged from Sprint 13).

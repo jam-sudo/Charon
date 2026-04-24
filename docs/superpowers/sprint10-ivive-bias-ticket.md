@@ -153,3 +153,21 @@ Other 11 compounds show zero delta.
 - propranolol 28.55x — CYP2D6 + extensive first-pass (largest outlier)
 - diazepam 4.91x — very low fu_p sensitivity
 - lisinopril 4.13x — non-hepatic elimination + low Peff
+
+## Sprint 14 (diazepam audit, 2026-04-24) — null result
+
+Parameter audit verified diazepam's `target_ceff_nM` (1800 nM = 513 ng/mL), `clint_uL_min_mg` (0.37), `fu_p` (0.013), `bp_ratio` (0.58) against primary literature (Greenblatt 1981 PMID:6790582, Jones & Larsson 2004 PMID:15257067, Obach 1999 DMD 27:1350, Mandelli 1978). All four values fall within literature ranges. No corrections warranted.
+
+No primary-literature source explicitly documents a diazepam-specific in vivo/in vitro CLint ratio ≈ 2x to justify a conservative multiplier. Sprint 14 accepts the honest null result — diazepam 4.91x residual is IRREDUCIBLE at the current framework.
+
+**Framework limitation hypothesis:** diazepam's fu_p = 0.013 sits at the well-stirred model's sensitivity boundary (CLAUDE.md §7 pitfall #10: "fu_p < 0.01 log-scale sampling"). Closure likely requires either extended-clearance modeling for extreme-low-fu_p substrates, or a re-examination of R&R Kp predictions for lipophilic neutral drugs (Sprint 3b-1.5 documented Vss overprediction in this class).
+
+**Layer 3 Tier A within-3x:** 8/12 = 66.7% (unchanged from Sprint 13; §8 still PASSED).
+
+**All Tier A residuals after Sprint 14:**
+- propranolol 28.55x — ACAT oral F computation architectural gap (not a multiplier fix)
+- diclofenac 3.10x — UGT/CYP2C9 Sprint 13 close-but-not-quite
+- diazepam 4.91x — Sprint 14 audit confirmed framework-limited
+- lisinopril 4.13x — non-hepatic elimination; CLrenal path not multiplier-addressable
+
+§8 target at 8/12 = 66.7% is the honest ceiling at Charon's current mechanistic coverage. Further closure requires architectural sprints (extended clearance, proper F modeling for high-extraction compounds, renal refinement).
