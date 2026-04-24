@@ -142,6 +142,7 @@ def decompose_fold_error(
     f_lit: float | None,
     route_ref: Literal["iv", "oral"],
     fih_reference_mg: float,
+    route_bias_override: float | None = None,
 ) -> DecompositionResult:
     """Decompose Tier A observed fold-error into three multiplicative factors (signed).
 
@@ -155,6 +156,9 @@ def decompose_fold_error(
             dose (NOT the simulation route, which is always iv_bolus per
             Sprint 7's panel.yaml).
         fih_reference_mg: Reference FIH dose in mg.
+        route_bias_override: If provided, bypasses compute_route_bias_factor
+            and uses this value directly. Used by the orchestrator when
+            simulation_route == reference_route (no 1/F artefact).
 
     Returns:
         DecompositionResult with signed factors satisfying:
@@ -183,9 +187,16 @@ def decompose_fold_error(
     else:
         fold_liver_signed = mrsd_ws / best_alt_mrsd
 
-    fold_route, flags = compute_route_bias_factor(
-        route_ref=route_ref, f_lit=f_lit
-    )
+    if route_bias_override is not None:
+        if route_bias_override <= 0:
+            raise ValueError(
+                f"route_bias_override must be > 0, got {route_bias_override}"
+            )
+        fold_route, flags = route_bias_override, ()
+    else:
+        fold_route, flags = compute_route_bias_factor(
+            route_ref=route_ref, f_lit=f_lit
+        )
 
     fold_residual_signed = fold_obs_signed / (fold_liver_signed * fold_route)
 
