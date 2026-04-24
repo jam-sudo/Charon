@@ -22,7 +22,7 @@ properties:
       value: 1.3e-4
       source: literature
       unit: cm/s
-      method: "Winiwarter 1998 J Med Chem 41:4939; Amidon 1995 (BCS moderate-permeability reference); F~50% due to first-pass metabolism"
+      method: "Winiwarter 1998 J Med Chem 41:4939; Amidon 1995 Pharm Res 12:413 (BCS I reference); F~50% due to first-pass metabolism"
   metabolism:
     clint_uL_min_mg: {value: 24.0, source: experimental, unit: uL/min/mg, method: "Obach 1999 Table 2"}
   renal:

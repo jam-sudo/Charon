@@ -41,7 +41,7 @@ properties:
       # describe low passive Peff. The 0.45e-4 value is consistent with the
       # atenolol BCS reference drug at 0.45e-4 cm/s (median jejunum).
       # Note: simulation will underpredict oral F due to missing OATP1B1 uptake.
-      method: "Wu 2000 / Lennernas 2003 transporter review; passive Peff compilation; compare atenolol reference 0.45e-4 cm/s"
+      method: "Wu & Benet 2000 Drug Metab Dispos 28:751 / Lennernas 2003 Clin Pharmacokinet 42:419; passive Peff compilation; compare atenolol reference 0.45e-4 cm/s"
   metabolism:
     clint_uL_min_mg: {value: 128.0, source: experimental, unit: uL/min/mg, method: "Obach 2008 HLM"}
   renal:

@@ -35,7 +35,7 @@ properties:
       # passive component only; PEPT1-mediated transport is not captured in the
       # ACAT model. Knutter 2008 is cited in task specification but the specific
       # Peff value could not be verified from available sources; using compilation.
-      method: "Knutter 2008 J Pharmacol Exp Ther 327:432 (PEPT1 substrate); passive Peff compilation (BCS III, F~25%)"
+      method: "BCS III passive Peff estimate ~0.3e-4 cm/s; PEPT1 substrate (Knutter 2008 J Pharmacol Exp Ther 327:432) — NO primary Peff measurement located"
   metabolism:
     clint_uL_min_mg: {value: 0.1, source: experimental, unit: uL/min/mg, method: "Beermann 1988 (negligible hepatic); physical minimum in HLM units"}
   renal:

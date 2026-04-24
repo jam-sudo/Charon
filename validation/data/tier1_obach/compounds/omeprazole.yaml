@@ -44,7 +44,7 @@ properties:
       # Caco-2 compilation reports Papp ~10-20e-6 cm/s; papp_to_peff conversion
       # (Lennernas log-linear, log_peff = 0.4926*log10(papp_nm_s) - 0.1454)
       # with papp=15e-6 cm/s = 15000 nm/s -> log_peff = 0.4926*4.176 - 0.1454
-      # = 1.912; peff = 10^1.912 / 1e4 = ~8.2e-5, upscaled by in vivo factors.
+      # = 1.912; peff = 10^1.912 × 1e-6 cm/s = ~8.2e-5 cm/s, upscaled by in vivo factors.
       # Table value 2.5e-4 from compilation reflects typical mid-range absorption.
       method: "Sun 2002 Adv Drug Deliv Rev 54:273 Caco-2 compilation; Winiwarter 1998 J Med Chem 41:4939"
   metabolism:
