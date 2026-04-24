@@ -65,3 +65,36 @@ Diagnostic produced at `validation/reports/layer3_ivive_decomposition.md`.
 - Sprint 12 — OATP1B1 plumbing (deferred, attributable to atorvastatin's dominant residual).
 - Sprint 13 — UGT / CYP2C9 calibration refresh (diclofenac residual).
 - §8 target remains FAILED at Sprint 9's honest 5/12 = 41.7%. Not revisited by Sprint 10.
+
+## Sprint 11 (oral migration) completed — 2026-04-24
+
+Tier A simulation route migrated iv_bolus → oral after Peff curation for 11 compounds. Benchmark re-run at `validation/reports/layer3_fih_dose.md`.
+
+**Layer 3 Tier A result:** within-3x = 7/12 = 58.3% (§8 FAIL — just 2% shy of 60% target).
+- Sprint 9 baseline: 5/12 = 41.7%
+- Sprint 11 result: 7/12 = 58.3%
+- Delta: +2 compounds within 3x; 0 compounds regressed.
+
+**Post-oral decomposition attribution:**
+- liver_model: 6.2%
+- route_bias: 0.0% (collapsed from 42.1% in Sprint 10 — confirms the route-comparison artefact hypothesis)
+- residual: 93.8% (now the pure mechanistic signal)
+
+**Key improvers (fold reduction):**
+- atorvastatin: 70.9x → 4.64x (−93% error; OATP residual still dominates)
+- lisinopril: 13.4x → 4.13x (−69%)
+- metoprolol: 7.25x → 2.13x (now within-3x)
+- verapamil: 8.14x → 2.49x (now within-3x)
+- diazepam: 6.13x → 4.91x (modest)
+
+**Stubborn residuals (Sprint 12/13 targets):**
+- propranolol 28.55x — F-correction partial; may need CYP2D6-specific tuning or transporter review
+- diclofenac 10.23x — UGT/CYP2C9 underprediction (Obach-known)
+- atorvastatin 4.64x — OATP1B1 uptake unmodelled (Sprint 12 primary target)
+- lisinopril 4.13x — non-hepatic elimination + low Peff
+- diazepam 4.91x — low fu_p well-stirred sensitivity
+
+Remediation tickets:
+- Sprint 12 — OATP1B1 plumbing (atorvastatin residual; largest per-compound mechanistic gap left).
+- Sprint 13 — UGT / CYP2C9 calibration refresh (diclofenac).
+- Sprint 14 (proposed) — CYP2D6 / beta-blocker F-correction path (propranolol); may require distinguishing extensive-vs-poor-metabolizer kinetics.
