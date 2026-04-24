@@ -9,7 +9,7 @@
 #   - FDA Prinivil label (starting 5-10 mg PO OD)
 #   - Lancaster 1988 (fu_p ≈ 0.75, low binding)
 name: lisinopril
-smiles: "N[C@@H](CCCCN)C(=O)N1CCC[C@H]1C(=O)N[C@@H](CC1CCCCC1)C(=O)O"
+smiles: "C1CC(N(C1)C(=O)C(CCCCN)NC(CCC2=CC=CC=C2)C(=O)O)C(=O)O"
 molecular_weight: 405.49
 source: experimental
 properties:
@@ -24,6 +24,6 @@ properties:
     fu_inc: {value: 1.0, source: experimental, unit: fraction, method: "hepatocyte default"}
     bp_ratio: {value: 0.85, source: experimental, unit: ratio, method: "Beermann 1988"}
   metabolism:
-    clint_uL_min_mg: {value: 0.1, source: experimental, unit: uL/min/10^6 cells, method: "Beermann 1988 (negligible hepatic)"}
+    clint_uL_min_mg: {value: 0.1, source: experimental, unit: uL/min/mg, method: "Beermann 1988 (negligible hepatic); physical minimum in HLM units"}
   renal:
     clrenal_L_h: {value: 5.0, source: experimental, unit: L/h, method: "Beermann 1988 (~100% renal)"}

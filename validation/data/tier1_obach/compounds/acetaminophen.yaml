@@ -24,6 +24,6 @@ properties:
     fu_inc: {value: 1.0, source: experimental, unit: fraction, method: "hepatocyte default"}
     bp_ratio: {value: 1.0, source: experimental, unit: ratio, method: "Prescott 1980"}
   metabolism:
-    clint_uL_min_mg: {value: 1.8, source: experimental, unit: uL/min/10^6 cells, method: "Obach 2008 hepatocyte"}
+    clint_uL_min_mg: {value: 5.0, source: experimental, unit: uL/min/mg, method: "Obach 2008 rescaled to HLM (hepatocellularity 120 × 10^6/g, MPPGL 40 mg/g)"}
   renal:
     clrenal_L_h: {value: 2.0, source: experimental, unit: L/h, method: "Prescott 1980 (~4% unchanged)"}
