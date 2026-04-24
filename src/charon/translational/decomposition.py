@@ -52,7 +52,7 @@ class DecompositionResult:
             or unknown-F.
         fold_residual_signed: observed / (liver * route_bias).
         best_alt_model_name: "parallel_tube", "dispersion", or "well_stirred".
-        flags: list of string flags, e.g. ["f_unknown"].
+        flags: tuple of string flags, e.g. ("f_unknown",).
     """
 
     fold_observed_signed: float
