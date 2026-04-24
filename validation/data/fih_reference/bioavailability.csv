@@ -1,0 +1,13 @@
+compound,fih_reference_route,f_oral,f_source,f_doi_or_pmid,notes
+midazolam,iv,,Heizmann 1983,PMID:6352420,IV reference dose; f_oral 0.30-0.60 range reported in oral studies but not applicable to IV FIH
+warfarin,oral,1.0,Breckenridge 1970,PMID:5441976,Racemate near-complete absorption; F ~100% cited
+propranolol,oral,0.26,Wood 1978,PMID:565544,Extensive first-pass; F 15-40% range; 0.26 = median
+verapamil,oral,0.22,Eichelbaum 1981,PMID:7296790,High first-pass; F 10-35% range; 0.22 = median single-dose
+omeprazole,oral,0.40,Andersson 1996,PMID:8737132,Single-dose F 0.30-0.40; increases to ~0.70 on repeat dosing
+theophylline,oral,1.0,Hendeles 1977,PMID:872579,Near-complete absorption; F ~96-100%
+diclofenac,oral,0.54,Willis 1979,PMID:523773,F 0.54 after oral tablet; subject to enterohepatic recirculation
+diazepam,oral,0.93,Greenblatt 1980,PMID:7389287,F 0.90-1.00 oral vs IV cross-over
+metoprolol,oral,0.50,Regardh 1980,PMID:7002442,F 0.40-0.60 range; 0.50 = midpoint of extensive metabolizers
+acetaminophen,oral,0.88,Rawlins 1977,PMID:860545,F 0.80-0.90 oral; some first-pass sulfation
+lisinopril,oral,0.25,Beermann 1988,PMID:3048950,Low GI absorption; F 0.25-0.29 reported range
+atorvastatin,oral,0.14,Lennernas 2003,PMID:12965954,F ~0.14 reflects OATP1B1 hepatic uptake + CYP3A4 first-pass
