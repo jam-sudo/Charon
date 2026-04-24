@@ -221,6 +221,14 @@ def build_compound_pbpk_params(
             kp_by_tissue_mut[tissue] = float(p.value)
     kp_by_tissue = kp_by_tissue_mut
 
+    # Sprint 12: optional OATP uptake enhancement factor
+    metab = compound.properties.metabolism
+    clint_multiplier = (
+        metab.hepatic_clint_multiplier.value
+        if metab.hepatic_clint_multiplier is not None
+        else None
+    )
+
     # Hepatic IVIVE with full audit via ParameterBridge.
     hep = bridge.clint_to_clh(
         clint=clint,
@@ -233,6 +241,7 @@ def build_compound_pbpk_params(
         liver_weight_g=topology.liver_weight_g,
         qh_L_h=topology.tissues["liver"].blood_flow_L_h,
         model=liver_model,
+        clint_multiplier=clint_multiplier,
     )
     clint_liver_L_h = hep.clint_liver_L_h
     assert clint_liver_L_h is not None
