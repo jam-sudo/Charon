@@ -74,6 +74,69 @@ panel:
       source_type: label_start
       notes: "Peak ~500 ng/mL at 20 mg, MW 345."
 
+    - name: theophylline
+      tier: gold
+      reference_fih_mg: 100.0
+      route: iv_bolus
+      target_ceff_nM: 55000.0
+      source: "FDA label (Theo-24), initial PO 100-200 mg"
+      source_type: label_start
+      notes: "Therapeutic Cp ~10 ug/mL, MW 180."
+
+    - name: diclofenac
+      tier: gold
+      reference_fih_mg: 50.0
+      route: iv_bolus
+      target_ceff_nM: 5000.0
+      source: "FDA Voltaren label, 50 mg PO TID initial"
+      source_type: label_start
+      notes: "Therapeutic Cp ~1.5 ug/mL, MW 296."
+
+    - name: diazepam
+      tier: gold
+      reference_fih_mg: 2.0
+      route: iv_bolus
+      target_ceff_nM: 1800.0
+      source: "FDA Valium label, 2-10 mg PO initial"
+      source_type: label_start
+      notes: "Therapeutic Cp ~500 ng/mL, MW 285. Very-low fu_p (~0.013)."
+
+    - name: metoprolol
+      tier: gold
+      reference_fih_mg: 50.0
+      route: iv_bolus
+      target_ceff_nM: 380.0
+      source: "FDA Lopressor label, 50 mg PO BID initial"
+      source_type: label_start
+      notes: "Therapeutic Cp ~100 ng/mL, MW 267. CYP2D6 substrate."
+
+    - name: acetaminophen
+      tier: gold
+      reference_fih_mg: 500.0
+      route: iv_bolus
+      target_ceff_nM: 66000.0
+      source: "FDA OTC Monograph 21 CFR 343, 325-650 mg q4-6h"
+      source_type: label_start
+      notes: "Therapeutic Cp ~10 ug/mL, MW 151. UGT-dominant elimination."
+
+    - name: lisinopril
+      tier: gold
+      reference_fih_mg: 10.0
+      route: iv_bolus
+      target_ceff_nM: 170.0
+      source: "FDA Prinivil label, 5-10 mg PO OD initial"
+      source_type: label_start
+      notes: "Therapeutic Cp ~70 ng/mL, MW 405. Renal-dominant (>95% unchanged)."
+
+    - name: atorvastatin
+      tier: gold
+      reference_fih_mg: 10.0
+      route: iv_bolus
+      target_ceff_nM: 5.3
+      source: "FDA Lipitor label, 10 mg PO OD initial"
+      source_type: label_start
+      notes: "Therapeutic Cp ~3 ng/mL, MW 559. CYP3A4 + OATP1B1 (transporter unmodelled — expect IVIVE overprediction)."
+
     # --- Tier B: sanity floor (full Obach-12) ---
     # target_ceff_nM = approximate human therapeutic free/total Cp.
     - name: theophylline
