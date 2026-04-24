@@ -164,13 +164,17 @@ def run_panel(panel_path: Path, bioav_path: Path) -> dict:
             "dispersion": bundle["mrsd_disp_mg"],
         }
         bioav_row = bioav[name]
+        simulation_route = "oral" if entry["route"].startswith("oral") else "iv"
+        reference_route = bioav_row["fih_reference_route"]
+        route_override = 1.0 if simulation_route == reference_route else None
         result = decompose_fold_error(
             mrsd_ws=mrsds["well_stirred"],
             mrsd_pt=mrsds["parallel_tube"],
             mrsd_disp=mrsds["dispersion"],
             f_lit=bioav_row["f_oral"],
-            route_ref=bioav_row["fih_reference_route"],
+            route_ref=reference_route,
             fih_reference_mg=float(entry["reference_fih_mg"]),
+            route_bias_override=route_override,
         )
         rows.append({
             "compound": name,
@@ -183,6 +187,8 @@ def run_panel(panel_path: Path, bioav_path: Path) -> dict:
             "cl_renal_L_h": bundle["cl_renal_L_h"],
             "reference_fih_mg": float(entry["reference_fih_mg"]),
             "fih_reference_route": bioav_row["fih_reference_route"],
+            "simulation_route": simulation_route,
+            "reference_route": reference_route,
             "f_lit": bioav_row["f_oral"],
             # Signed factors (log-additivity invariant holds on these).
             "fold_observed_signed": result.fold_observed_signed,

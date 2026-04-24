@@ -204,3 +204,34 @@ def test_decompose_symmetric_report_from_signed():
     # signed 2.0 -> symmetric 2.0; signed 0.5 -> symmetric 2.0
     assert to_symmetric(result.fold_observed_signed) == pytest.approx(2.0)
     assert to_symmetric(result.fold_residual_signed) == pytest.approx(2.0)
+
+
+def test_decompose_with_route_bias_override_bypasses_f_lookup():
+    """When simulation_route == reference_route, the orchestrator passes
+    route_bias_override=1.0 and the decomposition returns fold_route_bias=1.0
+    regardless of f_lit."""
+    result = decompose_fold_error(
+        mrsd_ws=10.0,
+        mrsd_pt=5.0,
+        mrsd_disp=15.0,
+        f_lit=0.5,         # Would normally produce fold_route_bias=2.0
+        route_ref="oral",
+        fih_reference_mg=5.0,
+        route_bias_override=1.0,
+    )
+    assert result.fold_route_bias == 1.0
+    assert result.flags == ()
+
+
+def test_decompose_with_route_bias_override_none_uses_default():
+    """override=None (default) preserves the original F-lookup path."""
+    result = decompose_fold_error(
+        mrsd_ws=10.0,
+        mrsd_pt=5.0,
+        mrsd_disp=15.0,
+        f_lit=0.5,
+        route_ref="oral",
+        fih_reference_mg=5.0,
+        route_bias_override=None,
+    )
+    assert result.fold_route_bias == pytest.approx(2.0, rel=1e-12)

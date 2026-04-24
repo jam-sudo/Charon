@@ -17,6 +17,16 @@ properties:
     fu_p: {value: 0.09, source: experimental, unit: fraction, method: "Obach 1999 Table 2"}
     fu_inc: {value: 0.68, source: experimental, unit: fraction, method: "Obach 1999 Table 2"}
     bp_ratio: {value: 0.77, source: experimental, unit: ratio, method: "Obach 1999 Table 2"}
+  permeability:
+    peff_cm_s:
+      value: 6.8e-4
+      source: literature
+      unit: cm/s
+      # Lennernas 1998 (Pharm Res 15:1389; PMID 9647350) measured verapamil Peff
+      # in human jejunum via Loc-I-Gut perfusion; high Peff consistent with complete
+      # absorption (F ~20-35% limited by CYP3A4 first-pass, not permeability).
+      # Sandstrom 1999 (Br J Clin Pharmacol 47:180) confirms high Peff at low dose.
+      method: "Lennernas 1998 Pharm Res 15:1389 (human jejunal perfusion, Loc-I-Gut); high permeability confirmed"
   metabolism:
     clint_uL_min_mg: {value: 140.0, source: experimental, unit: uL/min/mg, method: "Obach 1999 Table 2"}
   renal:

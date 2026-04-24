@@ -76,3 +76,45 @@ class TestPipelineWithDoseProjection:
         )
         result = pipe.run()
         assert "mrsd_mg" in result.metadata
+
+
+@pytest.mark.parametrize("compound_name", [
+    "midazolam", "warfarin", "propranolol", "verapamil", "omeprazole",
+    "theophylline", "diclofenac", "diazepam", "metoprolol", "acetaminophen",
+    "lisinopril", "atorvastatin",
+])
+def test_tier_a_oral_pipeline_runs_to_mrsd(compound_name):
+    """Sprint 11 smoke: every Tier A compound completes Pipeline(route=oral)
+    with a positive finite MRSD. Validates Task 1 Peff curation + Task 3
+    panel route flip."""
+    import math
+
+    compound_yaml = (
+        REPO_ROOT / "validation" / "data" / "tier1_obach" / "compounds"
+        / f"{compound_name}.yaml"
+    )
+    panel_yaml = REPO_ROOT / "validation" / "data" / "fih_reference" / "panel.yaml"
+
+    compound = CompoundConfig.model_validate(yaml.safe_load(compound_yaml.read_text()))
+    panel = yaml.safe_load(panel_yaml.read_text())["panel"]
+    entry = next(
+        c for c in panel["compounds"]
+        if c["name"] == compound_name and c["tier"] == "gold"
+    )
+
+    pipe = Pipeline(
+        compound,
+        route=entry["route"],
+        dose_mg=1.0,
+        dose_projection=DoseProjectionConfig(
+            target_ceff_nM=float(entry["target_ceff_nM"]),
+            safety_factor=10.0,
+            tau_h=24.0,
+        ),
+    )
+    result = pipe.run()
+    assert result.dose_recommendation is not None, f"{compound_name}: no dose rec"
+    mrsd = float(result.dose_recommendation.mrsd_mg)
+    assert mrsd > 0, f"{compound_name}: mrsd={mrsd} (must be > 0)"
+    assert not math.isnan(mrsd), f"{compound_name}: mrsd is NaN"
+    assert not math.isinf(mrsd), f"{compound_name}: mrsd is inf"
