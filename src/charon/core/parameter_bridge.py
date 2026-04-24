@@ -57,6 +57,7 @@ class ParameterBridge:
         qh_L_h: float = HUMAN_QH_L_H,
         bp_ratio: float = 1.0,
         model: str = "well_stirred",
+        clint_multiplier: float | None = None,
     ) -> HepaticClearance:
         """IVIVE: in-vitro CLint to in-vivo hepatic clearance.
 
@@ -114,6 +115,10 @@ class ParameterBridge:
             raise ValueError(f"bp_ratio must be > 0, got {bp_ratio}")
         if clint < 0:
             raise ValueError(f"clint must be >= 0, got {clint}")
+        if clint_multiplier is not None and clint_multiplier <= 0:
+            raise ValueError(
+                f"clint_multiplier must be > 0, got {clint_multiplier}"
+            )
 
         # Resolve the liver model function early so we fail fast on bad names.
         liver_model_fn = get_liver_model(model)
@@ -132,6 +137,8 @@ class ParameterBridge:
             "bp_ratio": bp_ratio,
             "model": model,
         }
+        if clint_multiplier is not None:
+            input_params["clint_multiplier"] = clint_multiplier
 
         # ---- Step 0: Scaling factor ------------------------------------
         if system == "HLM":
@@ -196,6 +203,24 @@ class ParameterBridge:
                 formula=f"{clint_liver_uL_min:.4g} / 1e6 * 60",
             )
         )
+
+        # ---- Step 3b (optional): CLint enhancement (Sprint 12) ---------
+        # Empirical multiplier for uptake-limited substrates (e.g., OATP1B1).
+        # Sourced from CompoundConfig.properties.metabolism.hepatic_clint_multiplier.
+        if clint_multiplier is not None and clint_multiplier != 1.0:
+            enhanced = clint_liver_L_h * clint_multiplier
+            steps.append(
+                ConversionStep(
+                    name="clint_enhancement",
+                    value=enhanced,
+                    unit="L/h",
+                    formula=(
+                        f"CLint_liver * multiplier = "
+                        f"{clint_liver_L_h:.4g} * {clint_multiplier} = {enhanced:.4g}"
+                    ),
+                )
+            )
+            clint_liver_L_h = enhanced
 
         # ---- Step 3: fu_b (blood unbound fraction) ---------------------
         fu_b = fu_p / bp_ratio

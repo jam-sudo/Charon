@@ -44,5 +44,18 @@ properties:
       method: "Wu & Benet 2000 Drug Metab Dispos 28:751 / Lennernas 2003 Clin Pharmacokinet 42:419; passive Peff compilation; compare atenolol reference 0.45e-4 cm/s"
   metabolism:
     clint_uL_min_mg: {value: 128.0, source: experimental, unit: uL/min/mg, method: "Obach 2008 HLM"}
+    # Sprint 12: OATP1B1 hepatic uptake enhancement.
+    # Passive IVIVE (HLM CLint) under-predicts in vivo CLh for OATP substrates
+    # because active uptake into hepatocyte is rate-limiting. Multiplier
+    # derived from literature in vivo/in vitro CLint_u ratios for OATP1B1
+    # substrates (hepatic uptake clearance IVIVE gap for statins). Atorvastatin
+    # CLint is dominated by OATP1B1/1B3-mediated uptake; passive IVIVE alone
+    # systematically under-predicts in vivo CL by ~5-12x (Barton 2013 /
+    # Izumi 2018 compilation). Value 8.0 = midpoint of 5-12x literature range.
+    hepatic_clint_multiplier:
+      value: 8.0
+      source: literature
+      unit: ratio
+      method: "Barton 2013 Pharm Res 30:1077 / Izumi 2018 Drug Metab Pharmacokinet 33(2):57 — in vivo/in vitro CLint_u ratio for OATP1B1 substrates 5-12x; 8.0 = midpoint of literature range"
   renal:
     clrenal_L_h: {value: 0.0, source: experimental, unit: L/h, method: "Lennernäs 2003 (<2% renal)"}

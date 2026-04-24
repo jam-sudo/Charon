@@ -1,11 +1,11 @@
 {
   "title": "Charon Layer 3 FIH Dose Benchmark",
   "panel": "charon_sprint7_fih",
-  "date_utc": "2026-04-24T06:34:06.234099+00:00",
+  "date_utc": "2026-04-24T15:40:51.303208+00:00",
   "summary": {
     "gold_n": 12,
-    "gold_within_3x": 7,
-    "gold_within_3x_fraction": 0.5833333333333334,
+    "gold_within_3x": 8,
+    "gold_within_3x_fraction": 0.6666666666666666,
     "gold_within_10x": 10,
     "sanity_n": 12,
     "sanity_pass_count": 12,
@@ -150,12 +150,12 @@
       {
         "compound": "atorvastatin",
         "route": "oral",
-        "mrsd_pred_mg": 2.154466359201309,
+        "mrsd_pred_mg": 16.979964778980083,
         "limiting_method": "pad",
         "reference_fih_mg": 10.0,
         "source_type": "label_start",
-        "fold_error": 4.641520605458486,
-        "within_3x": false,
+        "fold_error": 1.6979964778980083,
+        "within_3x": true,
         "within_10x": true,
         "source": "FDA Lipitor label, 10 mg PO OD initial"
       }

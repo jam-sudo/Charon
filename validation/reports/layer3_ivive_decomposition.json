@@ -1,12 +1,12 @@
 {
   "title": "Charon Sprint 10 \u2014 Tier A IVIVE Fold-Error Decomposition",
   "panel": "charon_sprint7_fih",
-  "date_utc": "2026-04-24T06:34:16.493356+00:00",
+  "date_utc": "2026-04-24T15:41:02.382549+00:00",
   "summary": {
     "n_compounds": 12,
-    "aggregate_pct_liver_model": 6.1643549322158675,
+    "aggregate_pct_liver_model": 4.526608133990374,
     "aggregate_pct_route_bias": 0.0,
-    "aggregate_pct_residual": 93.83739961741973
+    "aggregate_pct_residual": 95.47529401400328
   },
   "rows": [],
   "extra_sections": {
@@ -116,32 +116,6 @@
         "notes": "Low GI absorption; F 0.25-0.29 reported range"
       },
       {
-        "compound": "atorvastatin",
-        "mrsd_ws_mg": 2.154466359201309,
-        "mrsd_pt_mg": 2.7879443759178693,
-        "mrsd_disp_mg": 2.5934514836421836,
-        "clh_ws_L_h": 68.0802361222996,
-        "clh_pt_L_h": 88.09787657983608,
-        "clh_disp_L_h": 81.95198250556226,
-        "cl_renal_L_h": 0.0,
-        "reference_fih_mg": 10.0,
-        "fih_reference_route": "oral",
-        "simulation_route": "oral",
-        "reference_route": "oral",
-        "f_lit": 0.14,
-        "fold_observed_signed": 0.21544663592013089,
-        "fold_liver_model_signed": 0.7727795352774922,
-        "fold_route_bias": 1.0,
-        "fold_residual_signed": 0.2787944375917869,
-        "fold_observed": 4.641520605458487,
-        "fold_liver_model": 1.294030126769489,
-        "fold_residual": 3.5868721364671132,
-        "best_alt_model": "parallel_tube",
-        "flags": "-",
-        "f_source": "Lennernas 2003",
-        "notes": "F ~0.14 reflects OATP1B1 hepatic uptake + CYP3A4 first-pass"
-      },
-      {
         "compound": "verapamil",
         "mrsd_ws_mg": 16.05126690582592,
         "mrsd_pt_mg": 20.049097651711698,
@@ -192,6 +166,32 @@
         "flags": "-",
         "f_source": "Regardh 1980",
         "notes": "F 0.40-0.60 range; 0.50 = midpoint of extensive metabolizers"
+      },
+      {
+        "compound": "atorvastatin",
+        "mrsd_ws_mg": 16.979964778980083,
+        "mrsd_pt_mg": 17.95796007205965,
+        "mrsd_disp_mg": 17.95172517857826,
+        "clh_ws_L_h": 94.03392377624921,
+        "clh_pt_L_h": 99.44999713329291,
+        "clh_disp_L_h": 99.41546870487664,
+        "cl_renal_L_h": 0.0,
+        "reference_fih_mg": 10.0,
+        "fih_reference_route": "oral",
+        "simulation_route": "oral",
+        "reference_route": "oral",
+        "f_lit": 0.14,
+        "fold_observed_signed": 1.6979964778980083,
+        "fold_liver_model_signed": 1.0,
+        "fold_route_bias": 1.0,
+        "fold_residual_signed": 1.6979964778980083,
+        "fold_observed": 1.6979964778980083,
+        "fold_liver_model": 1.0,
+        "fold_residual": 1.6979964778980083,
+        "best_alt_model": "well_stirred",
+        "flags": "-",
+        "f_source": "Lennernas 2003",
+        "notes": "F ~0.14 reflects OATP1B1 hepatic uptake + CYP3A4 first-pass"
       },
       {
         "compound": "omeprazole",

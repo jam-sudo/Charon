@@ -215,12 +215,28 @@ class MetabolismProperties(BaseModel):
     secondary_cyp: str | None = None
     clint_uL_min_mg: PredictedProperty | None = None
     fm_cyp3a4: float | None = None
+    # Sprint 12: optional empirical multiplier applied to CLint_liver_L_h
+    # before the liver extraction model. Targets uptake-limited substrates
+    # (e.g., OATP1B1) where passive IVIVE under-predicts in vivo CLh.
+    # When None, no enhancement is applied (backward compatible).
+    hepatic_clint_multiplier: PredictedProperty | None = None
 
     @field_validator("fm_cyp3a4")
     @classmethod
     def _fm_cyp3a4_range(cls, v: float | None) -> float | None:
         if v is not None and (v < 0.0 or v > 1.0):
             raise ValueError(f"fm_cyp3a4 must be in [0.0, 1.0], got {v}")
+        return v
+
+    @field_validator("hepatic_clint_multiplier")
+    @classmethod
+    def check_hepatic_clint_multiplier(cls, v):
+        if v is None:
+            return v
+        if v.value <= 0:
+            raise ValueError(
+                f"hepatic_clint_multiplier must be > 0, got {v.value}"
+            )
         return v
 
 

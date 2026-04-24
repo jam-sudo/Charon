@@ -75,3 +75,42 @@ class TestOverrides:
         """Unknown override key should raise KeyError."""
         with pytest.raises(KeyError):
             apply_overrides(full_config, {"unknown_param": {"value": 1.0}})
+
+
+class TestMetabolismPropertiesHepaticClintMultiplier:
+    """Sprint 12: Tests for optional hepatic_clint_multiplier field."""
+
+    def test_metabolism_properties_accepts_hepatic_clint_multiplier(self):
+        """Schema: hepatic_clint_multiplier is an optional PredictedProperty."""
+        from charon.core.schema import MetabolismProperties, PredictedProperty
+
+        m = MetabolismProperties(
+            clint_uL_min_mg=PredictedProperty(
+                value=100.0,
+                source="experimental",
+                unit="uL/min/mg",
+                method="test",
+            ),
+            hepatic_clint_multiplier=PredictedProperty(
+                value=8.0,
+                source="literature",
+                unit="ratio",
+                method="Izumi 2018",
+            ),
+        )
+        assert m.hepatic_clint_multiplier is not None
+        assert m.hepatic_clint_multiplier.value == 8.0
+
+    def test_metabolism_properties_hepatic_clint_multiplier_optional(self):
+        """Schema: hepatic_clint_multiplier defaults to None."""
+        from charon.core.schema import MetabolismProperties, PredictedProperty
+
+        m = MetabolismProperties(
+            clint_uL_min_mg=PredictedProperty(
+                value=100.0,
+                source="experimental",
+                unit="uL/min/mg",
+                method="test",
+            ),
+        )
+        assert m.hepatic_clint_multiplier is None
