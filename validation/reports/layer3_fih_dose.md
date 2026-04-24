@@ -1,6 +1,6 @@
 # Charon Layer 3 FIH Dose Benchmark
 
-**Generated:** 2026-04-24T06:34:06.234099+00:00
+**Generated:** 2026-04-24T15:40:51.303208+00:00
 **Panel:** charon_sprint7_fih
 
 ## Summary
@@ -8,8 +8,8 @@
 | key | value |
 | --- | --- |
 | gold_n | 12 |
-| gold_within_3x | 7 |
-| gold_within_3x_fraction | 0.5833 |
+| gold_within_3x | 8 |
+| gold_within_3x_fraction | 0.6667 |
 | gold_within_10x | 10 |
 | sanity_n | 12 |
 | sanity_pass_count | 12 |
@@ -35,7 +35,7 @@
 | metoprolol | oral | 23.53 | pad | 50 | label_start | 2.125 | [PASS] | [PASS] | FDA Lopressor label, 50 mg PO BID initial |
 | acetaminophen | oral | 412.7 | pad | 500 | label_start | 1.211 | [PASS] | [PASS] | FDA OTC Monograph 21 CFR 343, 325-650 mg q4-6h |
 | lisinopril | oral | 2.424 | pad | 10 | label_start | 4.126 | [FAIL] | [PASS] | FDA Prinivil label, 5-10 mg PO OD initial |
-| atorvastatin | oral | 2.154 | pad | 10 | label_start | 4.642 | [FAIL] | [PASS] | FDA Lipitor label, 10 mg PO OD initial |
+| atorvastatin | oral | 16.98 | pad | 10 | label_start | 1.698 | [PASS] | [PASS] | FDA Lipitor label, 10 mg PO OD initial |
 
 ## Sanity floor (Tier B) — MRSD <= approved starting dose
 
@@ -61,32 +61,34 @@
 - MRSD computed via PAD path (target_ceff_nM) with safety_factor=10.
 - Sources: inline per compound in panel.yaml.
 
-## Sprint 11 comparison (oral migration)
+## Sprint 12 comparison (OATP enhancement for atorvastatin)
 
-Sprint 9 (iv_bolus) Tier A within-3x: 5/12 = 41.7% (§8 FAILED).
-Sprint 11 (oral)     Tier A within-3x: 7/12 = 58.3% (§8 FAIL — target is >=60%).
+Sprint 11 (oral, no OATP): Tier A within-3x = 7/12 = 58.3% (§8 FAILED by ~2%).
+Sprint 12 (oral + atorvastatin OATP multiplier=8.0): Tier A within-3x = 8/12 = 66.7% (§8 PASSED).
 
-Per-compound fold-error deltas (iv→oral):
+Per-compound fold-error deltas (Sprint 11 → Sprint 12):
 
-| Compound | Sprint 9 fold | Sprint 11 fold | improvement |
+| Compound | Sprint 11 fold | Sprint 12 fold | Δ |
 |---|---:|---:|:---:|
-| midazolam | 1.73 | 1.46 | ✓ |
-| warfarin | 1.04 | 1.02 | ~ |
-| propranolol | 36.30 | 28.55 | ✓ |
-| verapamil | 8.14 | 2.49 | ✓ |
-| omeprazole | 1.50 | 1.60 | ~ |
-| theophylline | 1.17 | 1.02 | ✓ |
-| diclofenac | 11.70 | 10.23 | ~ |
-| diazepam | 6.13 | 4.91 | ✓ |
-| metoprolol | 7.25 | 2.13 | ✓ |
-| acetaminophen | 1.74 | 1.21 | ✓ |
-| lisinopril | 13.36 | 4.13 | ✓ |
-| atorvastatin | 70.90 | 4.64 | ✓ |
+| midazolam | 1.46 | 1.46 | ~ |
+| warfarin | 1.02 | 1.02 | ~ |
+| propranolol | 28.55 | 28.55 | ~ |
+| verapamil | 2.49 | 2.49 | ~ |
+| omeprazole | 1.60 | 1.60 | ~ |
+| theophylline | 1.02 | 1.02 | ~ |
+| diclofenac | 10.23 | 10.23 | ~ |
+| diazepam | 4.91 | 4.91 | ~ |
+| metoprolol | 2.13 | 2.13 | ~ |
+| acetaminophen | 1.21 | 1.21 | ~ |
+| lisinopril | 4.13 | 4.13 | ~ |
+| atorvastatin | 4.64 | 1.70 | ↓↓ |
 
-**Interpretation:**
+**Interpretation:** The multiplier is atorvastatin-specific; other 11 compounds should show zero delta within numerical noise. Any non-zero delta on other compounds indicates accidental cross-contamination in the benchmark pipeline.
 
-- Compounds that moved INTO within-3x from outside: verapamil, metoprolol
-- Compounds that moved OUT of within-3x: none (Peff curation is sound)
-- Residuals for propranolol, diclofenac, diazepam, lisinopril, atorvastatin remain large — Sprint 12/13 target compounds.
+Confirmed: all 11 non-atorvastatin compounds show identical fold values to Sprint 11 (zero cross-contamination).
 
-Sprint 10's prediction that removing the 42% route_bias aggregate would shift the panel significantly toward within-3x compliance is supported by this result.
+Atorvastatin-only:
+- Sprint 11 MRSD = 2.15 mg (fold 4.64 outside 3x)
+- Sprint 12 MRSD = 16.98 mg (fold 1.70 WITHIN 3x)
+
+Multiplier applied: 8.0 (Izumi 2018 / Barton 2013 OATP1B1 IVIVE midpoint).
