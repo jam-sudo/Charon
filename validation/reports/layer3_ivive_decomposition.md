@@ -66,3 +66,42 @@ Largest remaining residual after Sprint 13:
 - propranolol 28.55x — CYP2D6 + extensive first-pass (Sprint 14 target)
 - diazepam 4.91x — very low fu_p sensitivity
 - lisinopril 4.13x — non-hepatic elimination
+
+## §10 Sprint 15 audit — propranolol F-decomposition
+
+**Generated:** by `scripts/sprint15_audit.py`
+**Reference FIH dose:** 10.0 mg (n/a)
+
+### F-decomposition (no multiplier)
+
+| Component | Value | Analytical expected | Within range? |
+|---|---:|---:|:---:|
+| Fa | 0.9490 | ~0.96 | yes |
+| Fg | 1.0066 | ~1.00 | **NO** |
+| Fh | 0.9231 | ~0.93 | yes |
+| F_oral | 0.8818 | ~0.89 | yes |
+| CLint_liver_L_h | 51.00 | ~51.0 | yes |
+| MRSD_base_mg | 0.3502 | 0.3502 (Sprint 14) | n/a |
+| fold_base | 28.55 | 28.55 (Sprint 14) | n/a |
+
+### Multiplier sweep (fold vs m)
+
+| m | MRSD_mg | fold_observed | within_3x | F_oral | CLint_liver_L_h |
+|---:|---:|---:|:---:|---:|---:|
+| 1 | 0.3502 | 28.55 | no | 0.882 | 51.00 |
+| 2 | 0.6952 | 14.38 | no | 0.819 | 102.00 |
+| 3 | 1.04 | 9.61 | no | 0.764 | 153.00 |
+| 5 | 1.73 | 5.78 | no | 0.674 | 255.00 |
+| 8 | 2.765 | 3.62 | no | 0.573 | 408.00 |
+| 12 | 4.145 | 2.41 | yes | 0.478 | 612.00 |
+| 15 | 5.18 | 1.93 | yes | 0.425 | 765.00 |
+| 20 | 6.904 | 1.45 | yes | 0.358 | 1020.00 |
+| 25 | 8.629 | 1.16 | yes | 0.310 | 1275.00 |
+| 30 | 10.35 | 0.97 | yes | 0.273 | 1530.00 |
+
+### Boundary summary
+
+- **m_close_3x:** 12  (smallest m bringing fold ≤ 3x)
+- **m_close_1x:** 30  (m bringing fold closest to 1.0)
+
+Use this empirical curve to choose the literature multiplier (Task 2). If literature supports a value ≥ m_close_3x, Branch A applies; if literature supports a value < m_close_3x but > 3, Branch B applies (close-but-not-quite); if literature is inconclusive or < 3, Branch C applies (null).
