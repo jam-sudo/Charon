@@ -45,6 +45,8 @@
 - Pipeline.liver_model is a no-op for the PBPK ODE; only one Pipeline run per compound.
 - Research only — no production code changes.
 
+<!-- BEGIN_PRESERVED_HISTORY -->
+
 ## §9. Sprint 13 — UGT/CYP2C9 correction for diclofenac
 
 After `hepatic_clint_multiplier: 3.5` added to diclofenac.yaml (Miners 2006 / Rowland 2013 / Obach 1999 midpoint):

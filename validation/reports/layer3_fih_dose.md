@@ -61,6 +61,8 @@
 - MRSD computed via PAD path (target_ceff_nM) with safety_factor=10.
 - Sources: inline per compound in panel.yaml.
 
+<!-- BEGIN_PRESERVED_HISTORY -->
+
 ## Sprint 15 comparison (CYP2D6 enhancement for propranolol — partial closure)
 
 Sprint 14 (8/12 = 66.7% within-3x, §8 PASSED): propranolol at 28.55x was the largest remaining residual.
