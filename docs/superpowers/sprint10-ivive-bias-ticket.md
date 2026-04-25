@@ -171,3 +171,51 @@ No primary-literature source explicitly documents a diazepam-specific in vivo/in
 - lisinopril 4.13x — non-hepatic elimination; CLrenal path not multiplier-addressable
 
 §8 target at 8/12 = 66.7% is the honest ceiling at Charon's current mechanistic coverage. Further closure requires architectural sprints (extended clearance, proper F modeling for high-extraction compounds, renal refinement).
+
+## Sprint 15 (CYP2D6 correction for propranolol — partial closure) completed — 2026-04-24
+
+Added `hepatic_clint_multiplier: 6.0` to propranolol.yaml (Hu 2020 DMD 48:1137 Table 2 CYP2D6 AFE=6.18 / Hallifax & Houston 2010 Pharm Res 27:2150 / Wood 2017 DMD 45:1178 / Chiba 2009 AAPS J 11:262 — CYP2D6/high-extraction base HLM IVIVE underprediction; 6.0 anchored to Hu 2020 CYP2D6 AFE=6.18 within cited 2.8-9x range).
+
+**Propranolol delta:**
+- Sprint 14: MRSD 0.3502 mg, fold 28.55x (outside 3x)
+- Sprint 15: MRSD 2.075 mg, fold 4.82x (still outside 3x by 1.82x)
+
+**Layer 3 Tier A within-3x:** 8/12 = 66.7% (unchanged; propranolol close but does not cross).
+
+Honest interpretation: substantial improvement (28.55 → 4.82x; ~6x reduction) but literature-cited multiplier range insufficient to fully close to 3x. Empirical sweep showed `m_close_3x = 12` would close fold to 2.41x, but cited literature for propranolol/CYP2D6 only supports up to ~9x. Per CLAUDE.md §6.5, multiplier was set to 6.0 (anchored to Hu 2020 CYP2D6 AFE=6.18) rather than inflated to force §8 closure. Further closure requires Sprint 16+ architectural work (per-CYP2D6 ML-recalibration of CLint or extended-clearance modeling).
+
+**Aggregate decomposition (post-Sprint-15):**
+- liver_model: 7.7% (was 5.3% in Sprint 13/14; small shift due to propranolol's altered residual)
+- route_bias: 0.0%
+- residual: 92.3%
+
+### Sprint 14 ticket reconciliation
+
+Sprint 14 ticket stated: *"propranolol 28.55x — ACAT oral F computation architectural gap (Sprint 11 oral migration barely improved from 36.3 → 28.55; ACAT likely gives F≈0.80 vs literature 0.26). Not a multiplier fix."*
+
+This was a hypothesis based on quick mental model, not on F-decomposition data. Sprint 15 audit (Task 1, see §10 of layer3_ivive_decomposition.md) explicitly captured Fa/Fg/Fh from the Pipeline output:
+
+- Fa = 0.949 (vs hypothesized ACAT issue → false; ACAT functioning correctly)
+- Fg = 1.0066 (non-CYP3A4 substrate; slight above-1.0 is solver-tolerance noise)
+- Fh = 0.923 (the actual gap source — too high, traceable to CLint underprediction in HLM)
+- F_oral = 0.882 (overpredicted ~3.4x vs literature 0.26)
+
+The gap is the **same Sprint 12/13 multiplier-template pattern** (HLM CLint underprediction for IVIVE-known substrate classes), **not ACAT architecture**. Sprint 14's claim was unverified at the time and is corrected here per CLAUDE.md §6.5 honesty.
+
+**Layer 3 Tier A within-3x progression (full sequence):**
+- Sprint 9:  5/12 = 41.7% (FAILED)
+- Sprint 11: 7/12 = 58.3% (FAILED by 2%)
+- Sprint 12: 8/12 = 66.7% (§8 PASSED — atorvastatin OATP closure)
+- Sprint 13: 8/12 = 66.7% (diclofenac UGT close-but-not-quite)
+- Sprint 14: 8/12 = 66.7% (diazepam parameter audit — honest null)
+- Sprint 15: 8/12 = 66.7% (propranolol CYP2D6 close-but-not-quite)
+
+§8 status: PASSED at 66.7% (held steady through Sprints 13-15 as remaining residuals require architectural rather than multiplier fixes).
+
+**Remaining unresolved gaps:**
+- propranolol 4.82x — Sprint 15 partial closure; Sprint 16+ needs architectural (per-CYP2D6 ML retraining or extended-clearance model)
+- diazepam 4.91x — Sprint 14 honest null; very low fu_p well-stirred sensitivity (framework-limited)
+- lisinopril 4.13x — non-hepatic elimination + low Peff (Sprint 17 candidate; renal CL refinement)
+- diclofenac 3.10x — Sprint 13 close-but-not-quite (literature midpoint multiplier 3.5)
+
+**Architectural observation (flag for Sprint 16+):** The Layer 3 report orchestrator (`validation/benchmarks/layer3_ivive_decomposition.py`) overwrites the entire `.md` file when regenerated, requiring manual restoration of historical sections (§9, §10) per sprint. The `layer3_fih_dose.md` orchestrator has the same fragility. Recommend refactoring for append-only mode or sidecar history file.
