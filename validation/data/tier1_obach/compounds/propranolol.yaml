@@ -28,6 +28,32 @@ properties:
       method: "Winiwarter 1998 J Med Chem 41:4939; confirmed by Lennernas 1997 J Pharm Pharmacol 49:627 (mean 3.59e-4 ± 1.60e-4)"
   metabolism:
     clint_uL_min_mg: {value: 13.6, source: experimental, unit: uL/min/mg, method: "Obach 1999 Table 2"}
+    # Sprint 15: CYP2D6 + CYP1A2 IVIVE underprediction correction.
+    # Propranolol is a high-extraction lipophilic base (E ~0.93, fu_p 0.13);
+    # HLM CLint systematically underpredicts in vivo CLint for CYP2D6
+    # substrates of this class. Class-level evidence (microsomes):
+    #   - Hu et al. 2020 (DMD 48:1137) Table 2: CYP2D6 substrate AFE = 6.18
+    #     (n=7); "almost all errors due to underprediction"; propranolol
+    #     observed CLint = 333 mL/min/kg.
+    #   - Hallifax & Houston 2010 (Pharm Res 27:2150): average microsome
+    #     prediction bias ~5-fold, with clearance-dependent worsening
+    #     for high CLint.
+    #   - Wood et al. 2017 (DMD 45:1178): human microsomes ~2.8-fold
+    #     average underprediction.
+    #   - Chiba et al. 2009 (review, AAPS J 11:262): human microsomes
+    #     ~9-fold average underprediction (upper end of cited range).
+    # Cited range across primary sources: 2.8-9x for HLM; CYP2D6-specific
+    # subclass at ~6x (Hu 2020). 6.0 = honest midpoint of well-supported
+    # 5-9x band; remains within Hu 2020 CYP2D6 AFE (6.18). Applied at the
+    # CLint_liver level (before well-stirred extraction) per Sprint 12/13
+    # pattern. Note: empirical sweep (Sprint 15 Task 1) showed m=12 needed
+    # to bring fold within 3x; that range is NOT supported by literature
+    # for propranolol/CYP2D6 specifically, so §8 closure is not forced.
+    hepatic_clint_multiplier:
+      value: 6.0
+      source: literature
+      unit: ratio
+      method: "Hu et al. 2020 DMD 48:1137 Table 2 (CYP2D6 AFE 6.18) / Hallifax & Houston 2010 Pharm Res 27:2150 (~5x microsome bias) / Wood et al. 2017 DMD 45:1178 (~2.8x HLM avg) / Chiba et al. 2009 AAPS J 11:262 (~9x HLM avg) — CYP2D6/high-extraction base HLM IVIVE underprediction; 6.0 = honest midpoint of cited 5-9x microsome range, anchored to Hu 2020 CYP2D6-specific AFE"
   renal:
     clrenal_L_h: {value: 0.1, source: experimental, unit: L/h, method: "Obach 1999 Table 2"}
   distribution:
