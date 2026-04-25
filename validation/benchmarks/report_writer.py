@@ -59,6 +59,45 @@ _REQUIRED_KEYS: tuple[str, ...] = (
 
 
 # ---------------------------------------------------------------------------
+# History preservation (Sprint 16)
+# ---------------------------------------------------------------------------
+
+# Sentinel marker for opt-in history preservation. When an existing .md file
+# contains this marker, emit_report preserves content from the marker through
+# end-of-file across regenerations. Place it at the boundary between
+# orchestrator-generated content (above) and user-managed sprint narratives
+# (below). Marker absence = current overwrite behavior (backwards compatible).
+_HISTORY_MARKER: str = "<!-- BEGIN_PRESERVED_HISTORY -->"
+
+
+def _extract_preserved_history(md_path: Path) -> str:
+    """Return content from history marker to EOF (inclusive of marker), or ''.
+
+    Returns empty string if the file does not exist OR does not contain the
+    marker. The marker itself is included in the returned content so it
+    persists across regenerations.
+
+    Parameters
+    ----------
+    md_path:
+        Path to the existing markdown report file.
+
+    Returns
+    -------
+    str
+        Preserved content (marker + everything after it) or ``""`` if no
+        preservation should occur.
+    """
+    if not md_path.exists():
+        return ""
+    content = md_path.read_text(encoding="utf-8")
+    idx = content.find(_HISTORY_MARKER)
+    if idx == -1:
+        return ""
+    return content[idx:]
+
+
+# ---------------------------------------------------------------------------
 # Cell formatting helpers
 # ---------------------------------------------------------------------------
 
@@ -279,8 +318,11 @@ def emit_report(payload: dict, *, stem: Path) -> tuple[Path, Path]:
     md_path = stem.with_suffix(".md")
     json_path = stem.with_suffix(".json")
 
-    # Write Markdown
+    # Write Markdown — preserve history below the sentinel marker if present
+    preserved = _extract_preserved_history(md_path)
     md_content = _render_markdown(payload)
+    if preserved:
+        md_content = md_content.rstrip() + "\n\n" + preserved
     md_path.write_text(md_content, encoding="utf-8")
 
     # Write JSON
