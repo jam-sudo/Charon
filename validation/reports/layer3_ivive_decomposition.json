@@ -1,42 +1,16 @@
 {
   "title": "Charon Sprint 10 \u2014 Tier A IVIVE Fold-Error Decomposition",
   "panel": "charon_sprint7_fih",
-  "date_utc": "2026-04-24T17:24:08.353705+00:00",
+  "date_utc": "2026-04-25T04:08:57.581591+00:00",
   "summary": {
     "n_compounds": 12,
-    "aggregate_pct_liver_model": 5.256058143174699,
+    "aggregate_pct_liver_model": 7.714357989975391,
     "aggregate_pct_route_bias": 0.0,
-    "aggregate_pct_residual": 94.74605525021602
+    "aggregate_pct_residual": 92.28817417285407
   },
   "rows": [],
   "extra_sections": {
     "Per-compound decomposition": [
-      {
-        "compound": "propranolol",
-        "mrsd_ws_mg": 0.35020485088967324,
-        "mrsd_pt_mg": 0.3638326982869046,
-        "mrsd_disp_mg": 0.3598664648993666,
-        "clh_ws_L_h": 7.65,
-        "clh_pt_L_h": 7.951582965113799,
-        "clh_disp_L_h": 7.863810597954031,
-        "cl_renal_L_h": 0.1,
-        "reference_fih_mg": 10.0,
-        "fih_reference_route": "oral",
-        "simulation_route": "oral",
-        "reference_route": "oral",
-        "f_lit": 0.26,
-        "fold_observed_signed": 0.035020485088967324,
-        "fold_liver_model_signed": 0.962543643104653,
-        "fold_route_bias": 1.0,
-        "fold_residual_signed": 0.036383269828690466,
-        "fold_observed": 28.554715831592947,
-        "fold_liver_model": 1.0389139309824256,
-        "fold_residual": 27.485160204359584,
-        "best_alt_model": "parallel_tube",
-        "flags": "-",
-        "f_source": "Wood 1978",
-        "notes": "Extensive first-pass; F 15-40% range; 0.26 = median"
-      },
       {
         "compound": "diazepam",
         "mrsd_ws_mg": 0.4073581899585781,
@@ -88,6 +62,32 @@
         "flags": "-",
         "f_source": "Beermann 1988",
         "notes": "Low GI absorption; F 0.25-0.29 reported range"
+      },
+      {
+        "compound": "propranolol",
+        "mrsd_ws_mg": 2.075249682290625,
+        "mrsd_pt_mg": 2.4485153802283497,
+        "mrsd_disp_mg": 2.329297770578422,
+        "clh_ws_L_h": 33.15,
+        "clh_pt_L_h": 39.13052589157861,
+        "clh_disp_L_h": 37.22040126672637,
+        "cl_renal_L_h": 0.1,
+        "reference_fih_mg": 10.0,
+        "fih_reference_route": "oral",
+        "simulation_route": "oral",
+        "reference_route": "oral",
+        "f_lit": 0.26,
+        "fold_observed_signed": 0.20752496822906247,
+        "fold_liver_model_signed": 0.8475542767867302,
+        "fold_route_bias": 1.0,
+        "fold_residual_signed": 0.24485153802283496,
+        "fold_observed": 4.818697280301315,
+        "fold_liver_model": 1.1798654403482287,
+        "fold_residual": 4.084107488459964,
+        "best_alt_model": "parallel_tube",
+        "flags": "-",
+        "f_source": "Wood 1978",
+        "notes": "Extensive first-pass; F 15-40% range; 0.26 = median"
       },
       {
         "compound": "diclofenac",

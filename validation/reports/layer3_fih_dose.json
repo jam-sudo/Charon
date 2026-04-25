@@ -1,12 +1,12 @@
 {
   "title": "Charon Layer 3 FIH Dose Benchmark",
   "panel": "charon_sprint7_fih",
-  "date_utc": "2026-04-24T17:23:58.750666+00:00",
+  "date_utc": "2026-04-25T04:08:52.876333+00:00",
   "summary": {
     "gold_n": 12,
     "gold_within_3x": 8,
     "gold_within_3x_fraction": 0.6666666666666666,
-    "gold_within_10x": 11,
+    "gold_within_10x": 12,
     "sanity_n": 12,
     "sanity_pass_count": 12,
     "sanity_pass_fraction": 1.0,
@@ -42,13 +42,13 @@
       {
         "compound": "propranolol",
         "route": "oral",
-        "mrsd_pred_mg": 0.35020485088967324,
+        "mrsd_pred_mg": 2.075249682290625,
         "limiting_method": "pad",
         "reference_fih_mg": 10.0,
         "source_type": "label_start",
-        "fold_error": 28.554715831592947,
+        "fold_error": 4.818697280301314,
         "within_3x": false,
-        "within_10x": false,
+        "within_10x": true,
         "source": "NDA 16-418 (Inderal), approved starting dose"
       },
       {
@@ -218,7 +218,7 @@
       {
         "compound": "propranolol",
         "route": "iv_bolus",
-        "mrsd_pred_mg": 0.27545902321806776,
+        "mrsd_pred_mg": 0.8651464716289311,
         "limiting_method": "pad",
         "approved_starting_dose_mg": 40.0,
         "pass_floor": true,

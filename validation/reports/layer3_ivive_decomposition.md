@@ -1,6 +1,6 @@
 # Charon Sprint 10 — Tier A IVIVE Fold-Error Decomposition
 
-**Generated:** 2026-04-24T17:24:08.353705+00:00
+**Generated:** 2026-04-25T04:08:57.581591+00:00
 **Panel:** charon_sprint7_fih
 
 ## Summary
@@ -8,9 +8,9 @@
 | key | value |
 | --- | --- |
 | n_compounds | 12 |
-| aggregate_pct_liver_model | 5.256 |
+| aggregate_pct_liver_model | 7.714 |
 | aggregate_pct_route_bias | 0.000 |
-| aggregate_pct_residual | 94.75 |
+| aggregate_pct_residual | 92.29 |
 
 ## Results
 
@@ -20,9 +20,9 @@
 
 | compound | mrsd_ws_mg | mrsd_pt_mg | mrsd_disp_mg | clh_ws_L_h | clh_pt_L_h | clh_disp_L_h | cl_renal_L_h | reference_fih_mg | fih_reference_route | simulation_route | reference_route | f_lit | fold_observed_signed | fold_liver_model_signed | fold_route_bias | fold_residual_signed | fold_observed | fold_liver_model | fold_residual | best_alt_model | flags | f_source | notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| propranolol | 0.3502 | 0.3638 | 0.3599 | 7.65 | 7.952 | 7.864 | 0.1 | 10 | oral | oral | oral | 0.26 | 0.03502 | 0.9625 | 1 | 0.03638 | 28.55 | 1.039 | 27.49 | parallel_tube | - | Wood 1978 | Extensive first-pass; F 15-40% range; 0.26 = median |
 | diazepam | 0.4074 | 0.4074 | 0.4074 | 0.04454 | 0.04455 | 0.04455 | 0.000 | 2 | oral | oral | oral | 0.93 | 0.2037 | 0.9998 | 1 | 0.2037 | 4.91 | 1 | 4.909 | parallel_tube | - | Greenblatt 1980 | F 0.90-1.00 oral vs IV cross-over |
 | lisinopril | 2.424 | 2.424 | 2.424 | 0.3166 | 0.3171 | 0.317 | 5 | 10 | oral | oral | oral | 0.25 | 0.2424 | 0.9999 | 1 | 0.2424 | 4.126 | 1 | 4.126 | parallel_tube | - | Beermann 1988 | Low GI absorption; F 0.25-0.29 reported range |
+| propranolol | 2.075 | 2.449 | 2.329 | 33.15 | 39.13 | 37.22 | 0.1 | 10 | oral | oral | oral | 0.26 | 0.2075 | 0.8476 | 1 | 0.2449 | 4.819 | 1.18 | 4.084 | parallel_tube | - | Wood 1978 | Extensive first-pass; F 15-40% range; 0.26 = median |
 | diclofenac | 16.15 | 16.72 | 16.55 | 6.898 | 7.142 | 7.071 | 0.1 | 50 | oral | oral | oral | 0.54 | 0.323 | 0.9662 | 1 | 0.3343 | 3.096 | 1.035 | 2.991 | parallel_tube | - | Willis 1979 | F 0.54 after oral tablet; subject to enterohepatic recirculation |
 | verapamil | 16.05 | 20.05 | 18.73 | 46.3 | 57.83 | 54.03 | 0.000 | 40 | oral | oral | oral | 0.22 | 0.4013 | 0.8006 | 1 | 0.5012 | 2.492 | 1.249 | 1.995 | parallel_tube | - | Eichelbaum 1981 | High first-pass; F 10-35% range; 0.22 = median single-dose |
 | metoprolol | 23.53 | 28.55 | 26.92 | 39.92 | 48.59 | 45.77 | 0.7 | 50 | oral | oral | oral | 0.5 | 0.4706 | 0.8241 | 1 | 0.571 | 2.125 | 1.213 | 1.751 | parallel_tube | - | Regardh 1980 | F 0.40-0.60 range; 0.50 = midpoint of extensive metabolizers |
@@ -105,3 +105,23 @@ Largest remaining residual after Sprint 13:
 - **m_close_1x:** 30  (m bringing fold closest to 1.0)
 
 Use this empirical curve to choose the literature multiplier (Task 2). If literature supports a value ≥ m_close_3x, Branch A applies; if literature supports a value < m_close_3x but > 3, Branch B applies (close-but-not-quite); if literature is inconclusive or < 3, Branch C applies (null).
+
+## §11. Sprint 15 — CYP2D6 correction for propranolol
+
+After `hepatic_clint_multiplier: 6.0` added to propranolol.yaml (Hu 2020 / Hallifax & Houston 2010 / Wood 2017 / Chiba 2009 midpoint anchored to Hu 2020 CYP2D6 AFE=6.18, within cited 2.8-9x literature range):
+
+- liver_model: 7.7%
+- route_bias:  0.0%
+- residual:    92.3%
+
+Propranolol per-compound:
+- Sprint 14 fold_residual: 27.49 (signed: 0.03638)
+- Sprint 15 fold_residual: 4.084 (signed: 0.245)
+
+The multiplier treats CYP2D6 + CYP1A2 hepatic clearance as an enhanced uniform path (empirical — analogous to Sprint 12 OATP1B1 atorvastatin and Sprint 13 UGT2B7 diclofenac approaches). Sprint 15 audit (§10) confirmed the F-gap traces to CLint underprediction (Fa, Fg normal; Fh too high), validating multiplier appropriateness. Branch B (close-but-not-quite) — empirical sweep showed m_close_3x=12 but cited literature only supports up to ~9x; per CLAUDE.md §6.5 honesty, multiplier was set to 6.0 (anchored to Hu 2020 CYP2D6 AFE=6.18) rather than inflated to force §8 closure.
+
+Remaining largest residuals after Sprint 15:
+- propranolol 4.82x — Sprint 15 partial closure (close-but-not-quite); Sprint 16+ architectural work needed for full 3x closure
+- diazepam 4.91x — very low fu_p well-stirred sensitivity (Sprint 14 honest null; framework-limited)
+- lisinopril 4.13x — non-hepatic elimination + low Peff (renal CL, multiplier inappropriate)
+- diclofenac 3.10x — Sprint 13 close-but-not-quite (literature midpoint multiplier 3.5)
