@@ -1,6 +1,6 @@
 # Charon Layer 3 FIH Dose Benchmark
 
-**Generated:** 2026-04-24T17:23:58.750666+00:00
+**Generated:** 2026-04-25T04:08:52.876333+00:00
 **Panel:** charon_sprint7_fih
 
 ## Summary
@@ -10,7 +10,7 @@
 | gold_n | 12 |
 | gold_within_3x | 8 |
 | gold_within_3x_fraction | 0.6667 |
-| gold_within_10x | 11 |
+| gold_within_10x | 12 |
 | sanity_n | 12 |
 | sanity_pass_count | 12 |
 | sanity_pass_fraction | 1 |
@@ -26,7 +26,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | midazolam | oral | 1.456 | pad | 1 | briefing | 1.456 | [PASS] | [PASS] | NDA 20-942 briefing, single-dose IV Phase 1 |
 | warfarin | oral | 2.03 | pad | 2 | label_start | 1.015 | [PASS] | [PASS] | FDA label (Coumadin), initial dose 2-5 mg |
-| propranolol | oral | 0.3502 | pad | 10 | label_start | 28.55 | [FAIL] | [FAIL] | NDA 16-418 (Inderal), approved starting dose |
+| propranolol | oral | 2.075 | pad | 10 | label_start | 4.819 | [FAIL] | [PASS] | NDA 16-418 (Inderal), approved starting dose |
 | verapamil | oral | 16.05 | pad | 40 | label_start | 2.492 | [PASS] | [PASS] | NDA 18-817 (Calan), lowest approved PO dose |
 | omeprazole | oral | 31.95 | pad | 20 | label_start | 1.597 | [PASS] | [PASS] | NDA 19-810 (Prilosec), standard 20 mg PO OD |
 | theophylline | oral | 97.88 | pad | 100 | label_start | 1.022 | [PASS] | [PASS] | FDA label (Theo-24), initial PO 100-200 mg |
@@ -47,7 +47,7 @@
 | warfarin | iv_bolus | 1.914 | pad | 5 | [PASS] | FDA label, upper bound of starting range |
 | diclofenac | iv_bolus | 12.52 | pad | 50 | [PASS] | FDA label (Voltaren), 50 mg PO TID; Cp ~1.5 μg/mL, MW 296 |
 | midazolam | iv_bolus | 0.5784 | pad | 2.5 | [PASS] | Conservative anaesthetic pre-med IV |
-| propranolol | iv_bolus | 0.2755 | pad | 40 | [PASS] | FDA label, upper initial PO |
+| propranolol | iv_bolus | 0.8651 | pad | 40 | [PASS] | FDA label, upper initial PO |
 | diazepam | iv_bolus | 0.3261 | pad | 2 | [PASS] | FDA label (Valium), 2-10 mg initial; therapeutic Cp ~500 ng/mL, MW 285 |
 | metoprolol | iv_bolus | 6.895 | pad | 50 | [PASS] | FDA label (Lopressor), 50 mg PO BID initial; Cp ~100 ng/mL, MW 267 |
 | verapamil | iv_bolus | 4.914 | pad | 80 | [PASS] | FDA label (Calan), 80 mg PO TID standard |
@@ -61,50 +61,26 @@
 - MRSD computed via PAD path (target_ceff_nM) with safety_factor=10.
 - Sources: inline per compound in panel.yaml.
 
-## Sprint 13 comparison (UGT/CYP2C9 enhancement for diclofenac)
+## Sprint 15 comparison (CYP2D6 enhancement for propranolol — partial closure)
 
-Sprint 12 (8/12 = 66.7% within-3x, §8 PASSED): diclofenac at 10.23x was the next-largest remaining residual.
-Sprint 13 (diclofenac `hepatic_clint_multiplier: 3.5`): Tier A within-3x = 8/12 = 66.7%.
+Sprint 14 (8/12 = 66.7% within-3x, §8 PASSED): propranolol at 28.55x was the largest remaining residual.
+Sprint 15 (propranolol `hepatic_clint_multiplier: 6.0`): Tier A within-3x = 8/12 = 66.7% (unchanged; propranolol close but stays outside 3x).
 
-Per-compound deltas (Sprint 12 → Sprint 13):
+**Propranolol-only:**
+- Sprint 14: MRSD = 0.3502 mg, fold 28.55x (outside 3x)
+- Sprint 15: MRSD = 2.075 mg, fold 4.82x (outside 3x by 1.82x)
 
-| Compound | Sprint 12 fold | Sprint 13 fold | Δ |
-|---|---:|---:|:---:|
-| midazolam | 1.46 | 1.456 | ~ |
-| warfarin | 1.02 | 1.015 | ~ |
-| propranolol | 28.55 | 28.55 | ~ |
-| verapamil | 2.49 | 2.492 | ~ |
-| omeprazole | 1.60 | 1.597 | ~ |
-| theophylline | 1.02 | 1.022 | ~ |
-| diclofenac | 10.23 | 3.096 | ↓ |
-| diazepam | 4.91 | 4.910 | ~ |
-| metoprolol | 2.13 | 2.125 | ~ |
-| acetaminophen | 1.21 | 1.211 | ~ |
-| lisinopril | 4.13 | 4.126 | ~ |
-| atorvastatin | 1.70 | 1.698 | ~ |
+Multiplier applied: 6.0 (Hu 2020 / Hallifax & Houston 2010 / Wood 2017 / Chiba 2009 — CYP2D6/high-extraction base IVIVE gap; cited range only supports up to ~9x — applying higher multiplier would violate CLAUDE.md §6.5 honesty).
 
-**Diclofenac-only:**
-- Sprint 12: MRSD = 4.89 mg, fold 10.23 (outside 3x)
-- Sprint 13: MRSD = 16.15 mg, fold 3.096 (OUTSIDE_3X — just above the 3.0 boundary)
+**Honest interpretation:** Substantial improvement (28.55 → 4.82x) but the literature-cited multiplier range is insufficient to fully close to 3x. Further closure requires either (a) finding additional primary literature with a higher cited ratio, or (b) architectural work (per-CYP2D6 ML-recalibration of CLint, or extended-clearance modeling of in vivo CYP2D6 turnover). Both are Sprint 16+ scope.
 
-Multiplier applied: 3.5 (Miners 2006 / Rowland 2013 / Obach 1999 midpoint for UGT2B7+CYP2C9 IVIVE gap).
-Other 11 compounds show zero delta (multiplier is diclofenac-scoped; all ratios within ±0.3%).
+### Sprint 14 ticket reconciliation
 
-**Interpretation:** Meaningful improvement from 10.23x, but diclofenac's fold sits at ~3.1x — just outside the 3x boundary. §8 target remains PASSED at 8/12. A more aggressive multiplier (4.0) would close the gap but exceeds the literature-supported midpoint (3.5). Honest reporting per spec §6.5.
+Sprint 14 (diazepam audit) ticket characterized propranolol's residual as *"ACAT oral F computation architectural gap... Not a multiplier fix."* Sprint 15 audit (Task 1, see §10 of decomposition report) explicitly captured `Fa, Fg, Fh, F_oral` from the pipeline output and found:
 
-## Sprint 14 audit — diazepam (null result, 2026-04-24)
+- Fa ≈ 0.949 — ACAT functioning normally for high-permeability propranolol
+- Fg ≈ 1.007 — non-CYP3A4 substrate, no gut metabolism issue (slightly above 1.0 is solver-tolerance noise around 1.0)
+- Fh ≈ 0.923 — analytically traceable to CLint underprediction in HLM
+- F_oral ≈ 0.882 (vs literature 0.26) — overprediction by ~3.4x
 
-Parameter audit of diazepam's stored values against primary literature (Greenblatt 1981 PMID:6790582; Jones & Larsson 2004 PMID:15257067; Obach 1999 DMD 27:1350 Table 2):
-
-| Parameter | Stored | Literature | Verdict |
-|---|---|---|---|
-| `target_ceff_nM` | 1800 nM (≈513 ng/mL total Cp) | Therapeutic range 200-600 ng/mL (Greenblatt 1980 / Mandelli 1978); Greenblatt 1981 long-term SS mean ~329 ng/mL | WITHIN RANGE |
-| `clint_uL_min_mg` | 0.37 | Obach 1999 Table 2 (authoritative) | EXACT MATCH |
-| `fu_p` | 0.013 | Greenblatt 1981 pooled mean 0.0148 (range 0.0085-0.0230, n=62) | WITHIN RANGE (1.14x below mean) |
-| `bp_ratio` | 0.58 | 0.51-0.59 (Jones & Larsson 2004 PMID:15257067; independent 2022 PBPK model uses exactly 0.58) | EXACT MATCH |
-
-No parameter corrections warranted. No primary-literature source explicitly documents a diazepam-specific in vivo/in vitro CLint ratio ≈ 2x — Branch C (conservative multiplier) does not qualify under the honest-evidence standard.
-
-**Conclusion:** Diazepam's 4.91x residual is IRREDUCIBLE at the current framework. Closure requires architectural work — most likely extended-clearance model handling for extreme-low-fu_p substrates (fu_p=0.013 sits at the well-stirred model's sensitivity boundary) or Vss overprediction investigation (documented in Sprint 3b-1.5 as a known R&R Kp issue for lipophilic neutral drugs).
-
-§8 target remains PASSED at 8/12 = 66.7% (unchanged from Sprint 13).
+The gap is therefore the **same Sprint 12/13 multiplier-template pattern** (HLM CLint underprediction for IVIVE-known substrate classes), **not an ACAT architectural issue**. Sprint 14's claim was a hypothesis based on a quick mental model and is corrected here per CLAUDE.md §6.5 honesty.
