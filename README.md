@@ -18,7 +18,7 @@ Charon is an open-source, auditable Python platform that takes a molecular struc
 This section is the most important part of this README. Read it before using any output from Charon.
 
 - **Not FDA-cleared. Research and educational tool only.** Any FIH dose selection for real clinical trials must go through a qualified pharmacometrician with validated commercial software.
-- **Accuracy vs targets**: AAFE_CL = 3.99, AAFE_Vss = 3.03 on the Obach n=12 panel (targets: 2.5 and 3.0 respectively). See [Layer 2 report](validation/reports/layer2_human_pk.md).
+- **Accuracy vs targets**: AAFE_CL = 3.42, AAFE_Vss = 3.26 on the Obach n=12 panel (targets: 2.5 and 3.0 respectively). Both still fail their gates despite Sprint 12-17 improvements (atorvastatin OATP, diclofenac UGT, propranolol CYP2D6, lisinopril Peff). See [Layer 2 report](validation/reports/layer2_human_pk.md).
 - **CLint Tier 2 ML limit**: scaffold-CV AAFE ~2.5. Experimental CLint override is strongly recommended for any serious use.
 - **Layer 3 FIH dose validation (Sprint 17)**: 8/12 gold within 3-fold (§8 target ≥60% MET), 12/12 within 10-fold, 12/12 sanity floor pass. Computed via PAD path (target_ceff_nM, safety_factor=10) on oral routes (Sprint 11 migrated all Tier A from iv_bolus to oral). Four close-but-not-quite residuals remain (lisinopril 3.085x, diclofenac 3.096x, propranolol 4.819x, diazepam 4.910x) — each requires architectural lift (PEPT1, UGT/CYP-specific ML, extended-clearance) rather than parameter tuning. See [Validation status § Layer 3](#layer-3----fih-dose-sprint-17-n12).
 - **No CYP phenotype modeling**: CYP2C19 polymorphisms (omeprazole) and CYP2D6 polymorphisms (dextromethorphan) are not modeled. Compounds primarily cleared by polymorphic CYPs will have higher prediction error.
@@ -53,20 +53,20 @@ Charon provides five subcommands. Each builds on the previous layer.
 # Layer 0 + Layer 1: ADMET property prediction
 charon predict "CCO"
 
-# Through Layer 2: PBPK simulation
+# Through Layer 2: PBPK simulation (oral route is the Sprint 11+ default for Tier A)
 charon simulate "CCO" --route oral --dose 100
 
-# Through Layer 3: FIH dose projection
+# Through Layer 3: FIH dose projection (oral; matches Tier A reference doses)
 charon translate "Cc1ncc2n1-c1ccc(Cl)cc1C(c1ccccc1F)=NC2" \
-    --route iv_bolus --dose 5 --noael 2 --noael-species rat
+    --route oral --dose 5 --noael 2 --noael-species rat
 
-# Through Layer 4: dose projection + uncertainty quantification
+# Through Layer 4: dose projection + uncertainty quantification (IV example)
 charon recommend "Cc1ncc2n1-c1ccc(Cl)cc1C(c1ccccc1F)=NC2" \
     --route iv_bolus --dose 5 --noael 2 --noael-species rat --uncertainty
 
 # Full pipeline + Markdown/JSON report
 charon report "Cc1ncc2n1-c1ccc(Cl)cc1C(c1ccccc1F)=NC2" \
-    --route iv_bolus --dose 5 --noael 2 --noael-species rat --output midazolam
+    --route oral --dose 5 --noael 2 --noael-species rat --output midazolam
 ```
 
 ### Python API
@@ -97,7 +97,7 @@ pytest tests/regression/test_known_drugs.py -v
 
 ## Validation status
 
-All numbers below are from automated benchmarks committed to this repository. We report failures honestly -- Phase A does not meet its accuracy targets.
+All numbers below are from automated benchmarks committed to this repository. We report failures honestly. **Layer 1 (fu_p) and Layer 2 (CL, Vss) accuracy targets are NOT met.** **Layer 3 §8 within-3x target IS met** at 8/12 = 66.7% (Sprint 12 onward; sustained through Sprint 17).
 
 ### Layer 1 -- ADMET (adme_reference.csv, n=153)
 
@@ -117,9 +117,9 @@ CLint was excluded from the Layer 1 benchmark because Charon predicts in hepatoc
 
 | Metric | AAFE | within 2-fold | within 3-fold | Target AAFE | Gate |
 |---|---|---|---|---|---|
-| CL (L/h) | 3.99 | 33% | 42% | < 2.5 | [FAIL] |
-| Vss (L) | 3.03 | 42% | 50% | < 3.0 | [FAIL] |
-| t_half (h) | 9.39 | 17% | 17% | -- | -- |
+| CL (L/h) | 3.42 | 33% | 42% | < 2.5 | [FAIL] |
+| Vss (L) | 3.26 | 42% | 42% | < 3.0 | [FAIL] |
+| t_half (h) | 7.81 | 17% | 25% | -- | -- |
 
 Full results: [Layer 2 report](validation/reports/layer2_human_pk.md)
 
@@ -246,8 +246,15 @@ UPDATE_BASELINES=1 pytest tests/regression/test_known_drugs.py
 
 ## Roadmap
 
-- **Phase B**: population variability, virtual trial, drug-drug interactions, special populations, REST API
-- **Phase C**: multi-compound dashboard, Pareto optimization
+**Active Phase A architectural sprints (post-Sprint-17, deferred to fresh sessions):**
+- **PEPT1 transporter modeling**: enable lisinopril (and class) full within-3x closure; multi-compound benefit if extended to PEPT2/OATP/OAT.
+- **Per-CYP ML retraining**: propranolol CYP2D6 substrate-specific calibration to close the 4.82x residual.
+- **Extended-clearance model**: address diazepam-class very-low-fu_p sensitivity (well-stirred breaks down at fu_p < 0.02).
+- **Sprint 3b 2b/2c**: oral formulation + precipitation kinetics (older carryover).
+
+**Phase B** (scaffolded only): population variability, virtual trial, drug-drug interactions, special populations, REST API.
+
+**Phase C** (scaffolded only): multi-compound dashboard, Pareto optimization.
 
 ---
 
