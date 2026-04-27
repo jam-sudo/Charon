@@ -1,25 +1,25 @@
 {
   "title": "Charon Layer 2 Human PBPK Benchmark \u2014 Obach 1999 Tier-1 Panel",
   "panel": "obach_1999_tier1",
-  "date_utc": "2026-04-24T05:46:06.825823+00:00",
+  "date_utc": "2026-04-27T19:12:52.753988+00:00",
   "summary": [
     {
       "metric": "CL (L/h)",
-      "AAFE": 3.9917524721858926,
+      "AAFE": 3.4198964820021773,
       "within_2_fold": 0.3333333333333333,
       "within_3_fold": 0.4166666666666667
     },
     {
       "metric": "Vss (L)",
-      "AAFE": 3.0279740069975944,
+      "AAFE": 3.2565462795905895,
       "within_2_fold": 0.4166666666666667,
-      "within_3_fold": 0.5
+      "within_3_fold": 0.4166666666666667
     },
     {
       "metric": "t_half (h)",
-      "AAFE": 9.388535157989027,
+      "AAFE": 7.810373274085945,
       "within_2_fold": 0.16666666666666666,
-      "within_3_fold": 0.16666666666666666
+      "within_3_fold": 0.25
     }
   ],
   "targets": [
@@ -101,17 +101,17 @@
     },
     {
       "compound": "diclofenac",
-      "cl_pred": 1.1415250791723348,
+      "cl_pred": 3.06067815262713,
       "cl_obs": 16.0,
-      "cl_fold": 14.016336821614846,
+      "cl_fold": 5.2275996371151985,
       "cl_pass_2x": false,
-      "vss_pred": 112.56029633476878,
+      "vss_pred": 81.98685004154042,
       "vss_obs": 13.0,
-      "vss_fold": 8.658484333443752,
+      "vss_fold": 6.306680772426186,
       "vss_pass_2x": false,
-      "t_half_pred": 79.52487843397932,
+      "t_half_pred": 29.0524575549385,
       "t_half_obs": 1.2,
-      "t_half_fold": 66.2707320283161,
+      "t_half_fold": 24.210381295782085,
       "t_half_pass_2x": false,
       "strict_target": false
     },
@@ -133,17 +133,17 @@
     },
     {
       "compound": "propranolol",
-      "cl_pred": 4.71664486167802,
+      "cl_pred": 11.248864385275523,
       "cl_obs": 50.0,
-      "cl_fold": 10.600755720711971,
+      "cl_fold": 4.444893127651954,
       "cl_pass_2x": false,
-      "vss_pred": 133.88893607619923,
+      "vss_pred": 40.7232399743035,
       "vss_obs": 270.0,
-      "vss_fold": 2.016596799651443,
+      "vss_fold": 6.630120790250748,
       "vss_pass_2x": false,
-      "t_half_pred": 28.093823317285135,
+      "t_half_pred": 8.44925513898501,
       "t_half_obs": 3.9,
-      "t_half_fold": 7.203544440329522,
+      "t_half_fold": 2.166475676662823,
       "t_half_pass_2x": false,
       "strict_target": false
     },
