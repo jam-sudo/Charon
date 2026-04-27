@@ -1,7 +1,7 @@
 {
   "title": "Charon Layer 3 FIH Dose Benchmark",
   "panel": "charon_sprint7_fih",
-  "date_utc": "2026-04-25T04:08:52.876333+00:00",
+  "date_utc": "2026-04-27T17:52:23.934018+00:00",
   "summary": {
     "gold_n": 12,
     "gold_within_3x": 8,
@@ -138,11 +138,11 @@
       {
         "compound": "lisinopril",
         "route": "oral",
-        "mrsd_pred_mg": 2.4235613130984412,
+        "mrsd_pred_mg": 3.241339943899157,
         "limiting_method": "pad",
         "reference_fih_mg": 10.0,
         "source_type": "label_start",
-        "fold_error": 4.126159278890014,
+        "fold_error": 3.0851438519498635,
         "within_3x": false,
         "within_10x": true,
         "source": "FDA Prinivil label, 5-10 mg PO OD initial"
