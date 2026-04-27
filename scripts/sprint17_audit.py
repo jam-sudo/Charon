@@ -13,8 +13,11 @@ Purpose:
    For each: print MRSD_PAD, fold vs ref=10 mg.
 4. Branch decision rationale based on Steps 1-3 outcomes.
 
-Output: prints markdown sections to stdout. Pipe to file or copy into the
-audit subsection of validation/reports/layer3_ivive_decomposition.md.
+Output: prints markdown sections to stdout for inspection. The actual
+narrative in validation/reports/layer3_ivive_decomposition.md (§12) is
+hand-edited from this audit's pre-correction snapshot — re-running the
+script post-correction will show updated live values reflecting the
+current YAML state.
 
 Usage:
     python3 scripts/sprint17_audit.py > /tmp/sprint17_audit.md
@@ -122,8 +125,8 @@ def main() -> int:
     print(f"| CL_renal_L_h | {cl_renal:.3f} | 5.0 (Beermann 1988) | {in_range(cl_renal, 4.5, 5.5)} |")
     print(f"| CLint_liver_L_h | {clint_liver:.4f} | ~0.3 (negligible from clint=0.1) | {in_range(clint_liver, 0.1, 0.6)} |")
     print(f"| CL_total_L_h (derived) | {cl_total:.3f} | ~5.1 (Beermann 1988) | {in_range(cl_total, 4.8, 5.6)} |")
-    print(f"| MRSD_PAD_mg | {mrsd_base:.4g} | 2.424 (Sprint 16) | n/a |")
-    print(f"| fold_base | {fold_base:.3f} | 4.126 (Sprint 16) | n/a |")
+    print(f"| MRSD_PAD_mg | {mrsd_base:.4g} | n/a (live PAD output) | n/a |")
+    print(f"| fold_base | {fold_base:.3f} | n/a (= ref / MRSD) | n/a |")
     print()
 
     # --- Section 2: parameter audit table ---
@@ -132,14 +135,35 @@ def main() -> int:
     print("| Parameter | Charon | Primary source | Literature range | OK? |")
     print("|---|---:|---|---|:---:|")
 
+    # Read parameter values from live YAML / panel — not hardcoded.
+    binding = base_data["properties"]["binding"]
+    metab = base_data["properties"]["metabolism"]
+    perm = base_data["properties"]["permeability"]
+    renal = base_data["properties"]["renal"]
+
+    def _verdict(value: float, lo: float, hi: float, low_conf: bool = False) -> str:
+        if low_conf:
+            return "FLAG-LOW-CONF"
+        return "OK" if lo <= value <= hi else "**OUT-OF-RANGE**"
+
+    peff_val = perm["peff_cm_s"]["value"]
     audit_rows = [
-        ("clrenal_L_h", 5.0, "Beermann 1988", "4.5-5.4 (~95% of CL_total=5.1)", "OK"),
-        ("fu_p", 0.75, "Lancaster 1988", "0.70-0.80 (low binding)", "OK"),
-        ("bp_ratio", 0.85, "Beermann 1988", "0.80-0.90", "OK"),
-        ("clint_uL_min_mg", 0.1, "Beermann 1988", "<1.0 (negligible)", "OK"),
-        ("target_ceff_nM", 170.0, "Beermann 1988 / Sprint 10 §4", "150-200 nM (Cmax 70 ng/mL × 1000/405)", "OK"),
-        ("peff_cm_s", 0.3e-4, "Knutter 2008 (cited; primary Peff NOT located)", "BCS III; PEPT1-mediated absorption not modelled", "FLAG-LOW-CONF"),
-        ("F_oral_obs", 0.25, "Beermann 1988", "0.25-0.29", "OK"),
+        ("clrenal_L_h", renal["clrenal_L_h"]["value"], "Beermann 1988", "4.5-5.4 (~95% of CL_total=5.1)",
+         _verdict(renal["clrenal_L_h"]["value"], 4.5, 5.4)),
+        ("fu_p", binding["fu_p"]["value"], "Lancaster 1988", "0.70-0.80 (low binding)",
+         _verdict(binding["fu_p"]["value"], 0.70, 0.80)),
+        ("bp_ratio", binding["bp_ratio"]["value"], "Beermann 1988", "0.80-0.90",
+         _verdict(binding["bp_ratio"]["value"], 0.80, 0.90)),
+        ("clint_uL_min_mg", metab["clint_uL_min_mg"]["value"], "Beermann 1988", "<1.0 (negligible)",
+         _verdict(metab["clint_uL_min_mg"]["value"], 0.0, 1.0)),
+        ("target_ceff_nM", float(entry["target_ceff_nM"]), "Beermann 1988 / Sprint 10 §4",
+         "150-200 nM (Cmax 70 ng/mL × 1000/405)",
+         _verdict(float(entry["target_ceff_nM"]), 150.0, 200.0)),
+        ("peff_cm_s", peff_val, "Knutter 2008 (PEPT1 substrate); empirical back-calibration to Beermann 1988 F_obs",
+         "BCS III; effective Peff = passive + PEPT1 (PEPT1 not modeled in ACAT)",
+         "FLAG-EMPIRICAL"),
+        ("F_oral_obs (panel)", 0.25, "Beermann 1988", "0.25-0.29",
+         "OK"),
     ]
 
     for name, val, src, lit, ok in audit_rows:
@@ -220,7 +244,7 @@ def main() -> int:
     print()
     n_audit_ok = sum(1 for _, _, _, _, ok in audit_rows if ok == "OK")
     n_audit_flag = sum(1 for _, _, _, _, ok in audit_rows if "FLAG" in ok)
-    n_audit_fail = len(audit_rows) - n_audit_ok - n_audit_flag
+    n_audit_fail = sum(1 for _, _, _, _, ok in audit_rows if "OUT-OF-RANGE" in ok)
 
     print(f"- Audit results: {n_audit_ok} OK, {n_audit_flag} flagged, {n_audit_fail} out-of-range")
     print(f"- target_ceff sweep: even 4× (700 nM) {'closes within 3x' if target_close_3x else 'does NOT reach within-3x'}")
