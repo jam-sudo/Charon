@@ -7,8 +7,8 @@ Charon is an open-source, auditable Python platform that takes a molecular struc
 ## Project status
 
 - **Phase A**: MVP feature-complete (Layers 0--4, CLI, reports)
-- **790+ tests** across unit, integration, and regression suites
-- **Phase A accuracy targets are NOT met** -- see [Known limitations](#known-limitations) and [Validation status](#validation-status)
+- **948 tests** across unit, integration, and regression suites
+- **Layer 3 §8 target met** at 8/12 = 66.7% within-3x (Sprint 12 onward); Layer 1/2 accuracy targets NOT met -- see [Known limitations](#known-limitations) and [Validation status](#validation-status)
 - **Phase B** (population variability, DDI, API) and **Phase C** (multi-compound dashboard) are scaffolded only -- no implementation
 
 ---
@@ -20,7 +20,7 @@ This section is the most important part of this README. Read it before using any
 - **Not FDA-cleared. Research and educational tool only.** Any FIH dose selection for real clinical trials must go through a qualified pharmacometrician with validated commercial software.
 - **Accuracy vs targets**: AAFE_CL = 3.99, AAFE_Vss = 3.03 on the Obach n=12 panel (targets: 2.5 and 3.0 respectively). See [Layer 2 report](validation/reports/layer2_human_pk.md).
 - **CLint Tier 2 ML limit**: scaffold-CV AAFE ~2.5. Experimental CLint override is strongly recommended for any serious use.
-- **Layer 3 FIH dose validation is a Sprint 7 baseline**: 3/5 gold within 3-fold, 12/12 sanity floor pass. Computed via PAD path (target_ceff_nM, safety_factor=10) on iv_bolus routes; Tier A fold-errors carry a `1/F` bias since reference doses are clinical oral amounts. See [Validation status § Layer 3](#layer-3----fih-dose-sprint-7-baseline).
+- **Layer 3 FIH dose validation (Sprint 17)**: 8/12 gold within 3-fold (§8 target ≥60% MET), 12/12 within 10-fold, 12/12 sanity floor pass. Computed via PAD path (target_ceff_nM, safety_factor=10) on oral routes (Sprint 11 migrated all Tier A from iv_bolus to oral). Four close-but-not-quite residuals remain (lisinopril 3.085x, diclofenac 3.096x, propranolol 4.819x, diazepam 4.910x) — each requires architectural lift (PEPT1, UGT/CYP-specific ML, extended-clearance) rather than parameter tuning. See [Validation status § Layer 3](#layer-3----fih-dose-sprint-17-n12).
 - **No CYP phenotype modeling**: CYP2C19 polymorphisms (omeprazole) and CYP2D6 polymorphisms (dextromethorphan) are not modeled. Compounds primarily cleared by polymorphic CYPs will have higher prediction error.
 - **Conformal CI is marginal, not conditional**: out-of-domain (OOD) compounds may have actual coverage well below the nominal 90%.
 - **Single-subject only**: no population variability, no virtual trials, no special populations (Phase B scope).
@@ -123,23 +123,35 @@ CLint was excluded from the Layer 1 benchmark because Charon predicts in hepatoc
 
 Full results: [Layer 2 report](validation/reports/layer2_human_pk.md)
 
-### Layer 3 -- FIH dose (Sprint 9, n=12)
+### Layer 3 -- FIH dose (Sprint 17, n=12)
 
-Two-tier benchmark against `validation/data/fih_reference/panel.yaml`. All compounds run as `iv_bolus` because the reused compound YAMLs lack absorption data; reference doses are daily oral equivalents, so Tier A fold-errors carry a `1/F` bias and Tier B is conservative.
+Two-tier benchmark against `validation/data/fih_reference/panel.yaml`. All Tier A compounds run as `oral` (Sprint 11 migrated from iv_bolus); reference doses are FDA-label starting doses for the same route, eliminating the Sprint 9 `1/F` bias.
 
 | Tier | Metric | Result | §8 target |
 | --- | --- | --- | --- |
-| Gold (n=12) | Within-3-fold of reference FIH dose | 5/12 (41.7%) | >= 60% [FAIL] |
-| Gold (n=12) | Within-10-fold of reference FIH dose | 8/12 (66.7%) | -- |
+| Gold (n=12) | Within-3-fold of reference FIH dose | **8/12 (66.7%)** | >= 60% **[PASS]** |
+| Gold (n=12) | Within-10-fold of reference FIH dose | 12/12 (100%) | -- |
 | Sanity (n=12) | MRSD <= approved starting dose | 12/12 (100%) | gated [PASS] |
 
 Panel composition: 5 core (Sprint 7) + 4 Obach promotions (theophylline, diclofenac, diazepam, metoprolol) + 3 elimination-diversity additions (acetaminophen UGT, lisinopril renal, atorvastatin CYP3A4+OATP).
 
-**§8 target not met** at the widened panel. Honest reading: high-F-variance oral beta-blockers (propranolol 36x, metoprolol 7x), transporter-limited compounds (atorvastatin 71x — OATP1B1 unmodelled), non-hepatic elimination (lisinopril 13x), and very-low fu_p compounds (diazepam 6x — well-stirred sensitivity) drag the within-3x fraction below 60%. Tracked for Sprint 10 IVIVE-bias investigation: `docs/superpowers/sprint10-ivive-bias-ticket.md`. The Tier B sanity-floor gate (12/12 pass) is unaffected.
+**§8 target MET** at 8/12 = 66.7%, achieved through Sprints 10-17:
+- Sprint 10: IVIVE-bias diagnostic decomposition (`docs/superpowers/sprint10-ivive-bias-ticket.md`).
+- Sprint 11: oral route migration → +2 within-3x (5/12 → 7/12); route_bias collapsed 42% → 0%.
+- Sprint 12: atorvastatin OATP1B1 enhancement (`hepatic_clint_multiplier: 8.0`) → +1 within-3x (7/12 → 8/12, **§8 first met**).
+- Sprints 13-17: close-but-not-quite refinements for the 4 remaining compounds. All are now within 5x; full closure requires architectural sprints (per-CYP ML retraining, PEPT1 transporter, extended-clearance).
 
-Tier A passes (within 3x): midazolam (1.7x), warfarin (1.0x), omeprazole (1.5x), theophylline (1.2x), acetaminophen (1.7x). MRSD computed via PAD path with `safety_factor=10`.
+**Tier A passes (within-3x, n=8):** warfarin (1.02x), theophylline (1.02x), acetaminophen (1.21x), midazolam (1.46x), omeprazole (1.60x), atorvastatin (1.70x), metoprolol (2.13x), verapamil (2.49x).
 
-Full results: [Layer 3 report](validation/reports/layer3_fih_dose.md).
+**Tier A close-but-not-quite (n=4, all within 5x):**
+- lisinopril 3.085x — Sprint 17 Branch B (Peff back-calibration; PEPT1 transporter not modeled in ACAT)
+- diclofenac 3.096x — Sprint 13 Branch B (UGT/CYP2C9 multiplier 3.5, literature midpoint)
+- propranolol 4.819x — Sprint 15 Branch B (CYP2D6 IVIVE multiplier 6.0, literature midpoint)
+- diazepam 4.910x — Sprint 14 honest null (low fu_p well-stirred sensitivity, framework-limited)
+
+MRSD computed via PAD path with `safety_factor=10`. CLAUDE.md §6.5 honesty discipline: no multiplier inflated above cited literature range to force closure.
+
+Full results: [Layer 3 report](validation/reports/layer3_fih_dose.md). Per-compound IVIVE decomposition: [Layer 3 IVIVE decomposition](validation/reports/layer3_ivive_decomposition.md).
 
 ### Uncertainty
 
@@ -214,7 +226,7 @@ src/charon/
 ## Development
 
 ```bash
-# Full test suite (~790 tests)
+# Full test suite (~948 tests)
 pytest tests/
 
 # Unit tests with coverage
