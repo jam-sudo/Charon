@@ -1,12 +1,12 @@
 {
   "title": "Charon Sprint 10 \u2014 Tier A IVIVE Fold-Error Decomposition",
   "panel": "charon_sprint7_fih",
-  "date_utc": "2026-04-25T04:08:57.581591+00:00",
+  "date_utc": "2026-04-27T17:52:27.410419+00:00",
   "summary": {
     "n_compounds": 12,
-    "aggregate_pct_liver_model": 7.714357989975391,
+    "aggregate_pct_liver_model": 7.972496691922432,
     "aggregate_pct_route_bias": 0.0,
-    "aggregate_pct_residual": 92.28817417285407
+    "aggregate_pct_residual": 92.03012020242025
   },
   "rows": [],
   "extra_sections": {
@@ -38,32 +38,6 @@
         "notes": "F 0.90-1.00 oral vs IV cross-over"
       },
       {
-        "compound": "lisinopril",
-        "mrsd_ws_mg": 2.4235613130984412,
-        "mrsd_pt_mg": 2.423791331410936,
-        "mrsd_disp_mg": 2.42372630146197,
-        "clh_ws_L_h": 0.31663571239055455,
-        "clh_pt_L_h": 0.31714031013607297,
-        "clh_disp_L_h": 0.3169976520786179,
-        "cl_renal_L_h": 5.0,
-        "reference_fih_mg": 10.0,
-        "fih_reference_route": "oral",
-        "simulation_route": "oral",
-        "reference_route": "oral",
-        "f_lit": 0.25,
-        "fold_observed_signed": 0.24235613130984412,
-        "fold_liver_model_signed": 0.9999050997874636,
-        "fold_route_bias": 1.0,
-        "fold_residual_signed": 0.2423791331410936,
-        "fold_observed": 4.126159278890014,
-        "fold_liver_model": 1.0000949092194416,
-        "fold_residual": 4.125767705497489,
-        "best_alt_model": "parallel_tube",
-        "flags": "-",
-        "f_source": "Beermann 1988",
-        "notes": "Low GI absorption; F 0.25-0.29 reported range"
-      },
-      {
         "compound": "propranolol",
         "mrsd_ws_mg": 2.075249682290625,
         "mrsd_pt_mg": 2.4485153802283497,
@@ -88,6 +62,32 @@
         "flags": "-",
         "f_source": "Wood 1978",
         "notes": "Extensive first-pass; F 15-40% range; 0.26 = median"
+      },
+      {
+        "compound": "lisinopril",
+        "mrsd_ws_mg": 3.241339943899157,
+        "mrsd_pt_mg": 3.241647576943177,
+        "mrsd_disp_mg": 3.2415606040368203,
+        "clh_ws_L_h": 0.31663571239055455,
+        "clh_pt_L_h": 0.31714031013607297,
+        "clh_disp_L_h": 0.3169976520786179,
+        "cl_renal_L_h": 5.0,
+        "reference_fih_mg": 10.0,
+        "fih_reference_route": "oral",
+        "simulation_route": "oral",
+        "reference_route": "oral",
+        "f_lit": 0.25,
+        "fold_observed_signed": 0.3241339943899157,
+        "fold_liver_model_signed": 0.9999050997874636,
+        "fold_route_bias": 1.0,
+        "fold_residual_signed": 0.3241647576943177,
+        "fold_observed": 3.0851438519498635,
+        "fold_liver_model": 1.0000949092194416,
+        "fold_residual": 3.0848510711426083,
+        "best_alt_model": "parallel_tube",
+        "flags": "-",
+        "f_source": "Beermann 1988",
+        "notes": "Low GI absorption; F 0.25-0.29 reported range"
       },
       {
         "compound": "diclofenac",

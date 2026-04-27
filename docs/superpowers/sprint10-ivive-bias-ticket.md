@@ -219,3 +219,36 @@ The gap is the **same Sprint 12/13 multiplier-template pattern** (HLM CLint unde
 - diclofenac 3.10x — Sprint 13 close-but-not-quite (literature midpoint multiplier 3.5)
 
 **Architectural observation (flag for Sprint 16+):** The Layer 3 report orchestrator (`validation/benchmarks/layer3_ivive_decomposition.py`) overwrites the entire `.md` file when regenerated, requiring manual restoration of historical sections (§9, §10) per sprint. The `layer3_fih_dose.md` orchestrator has the same fragility. Recommend refactoring for append-only mode or sidecar history file.
+
+## Sprint 17 (lisinopril audit + Peff back-calibration, 2026-04-27) — Branch B close-but-not-quite
+
+Audit-first sprint following Sprint 14 honest-discipline pattern. Sprint 16 closure had described lisinopril 4.13x as "non-hepatic elimination + low Peff (Sprint 17 candidate; renal CL refinement)". Sprint 17 audit (`scripts/sprint17_audit.py`) refuted the "renal CL refinement" framing — `clrenal_L_h: 5.0` is direct experimental input from Beermann 1988, not an IVIVE prediction.
+
+**Real finding:** Charon over-predicts lisinopril F_oral (0.3342 pred vs 0.25 obs, Beermann 1988). Root cause: YAML `peff_cm_s: 0.3e-4` was a placeholder (file comment self-flagged "NO primary Peff measurement located"). Lisinopril is BCS III + PEPT1 substrate (Knutter 2008); ACAT does not model PEPT1, so the effective Peff lumps passive + PEPT1 contributions and must be empirically tuned to reproduce observed F_oral.
+
+**Correction:** `peff_cm_s = 2.10e-5` (back-calibrated to Beermann 1988 F_obs=0.25 typical adult; lower-bound of reported 0.25-0.29 range, the commonly-cited textbook value matching `panel.yaml` `f_lit=0.25`).
+
+**Lisinopril delta:**
+- Sprint 16: MRSD 2.424 mg, F_oral_pred=0.3342, fold 4.126x
+- Sprint 17: MRSD 3.241 mg, F_oral_pred=0.2498, fold 3.085x (Branch B; still outside 3x by 0.085)
+
+**Sweep evidence (CLAUDE.md §6.5 honesty):** ALL Beermann 1988 F_obs anchors give fold > 3x:
+- F=0.25 (lower-bound, typical adult) → Peff=2.10e-5 → fold 3.085x ← chosen anchor
+- F=0.27 (midpoint) → Peff=2.30e-5 → fold 3.329x
+- F=0.29 (upper-bound) → Peff=2.50e-5 → fold 3.566x
+
+Branch A (within-3x) is therefore not honestly attainable via Peff calibration alone. PEPT1 transporter modeling is the architectural lift required for full closure (deferred as future sprint candidate; multi-compound benefit).
+
+**Layer 3 Tier A within-3x:** 8/12 = 66.7% (unchanged from Sprint 12).
+
+**Updated residual classifications:**
+- propranolol 4.82x — Sprint 15 Branch B (CYP2D6 IVIVE multiplier 6.0)
+- diazepam 4.91x — Sprint 14 honest null (framework-low-fu_p sensitivity)
+- lisinopril 3.085x — Sprint 17 Branch B (Peff back-calibration; PEPT1 not modeled) ← updated from 4.13x
+- diclofenac 3.10x — Sprint 13 Branch B (UGT/CYP2C9 multiplier 3.5)
+
+**Pattern lessons established (extending prior Charon precedents):**
+- "Audit FIRST" precedent (Sprint 14) extended to PK over-prediction case (not just under-prediction)
+- Honest-anchor selection: when literature reports a range (Beermann 1988 0.25-0.29), calibration to the **lower-bound** is more defensible than midpoint when the lower-bound is also the commonly-cited textbook typical value (matches `panel.yaml`'s `f_lit=0.25`)
+- Sprint 16 marker preservation infrastructure exercised for first time in benchmark regen (§9-§11 + new §12 stable across regen — verified by grep counts)
+- Audit script discipline: prefer live data-driven Section 2 over hardcoded snapshot (matches Sprint 14/15 precedent; Sprint 17 audit script refactored mid-task per code review)

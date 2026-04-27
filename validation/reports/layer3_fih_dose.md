@@ -1,6 +1,6 @@
 # Charon Layer 3 FIH Dose Benchmark
 
-**Generated:** 2026-04-25T04:08:52.876333+00:00
+**Generated:** 2026-04-27T17:52:23.934018+00:00
 **Panel:** charon_sprint7_fih
 
 ## Summary
@@ -34,7 +34,7 @@
 | diazepam | oral | 0.4074 | pad | 2 | label_start | 4.91 | [FAIL] | [PASS] | FDA Valium label, 2-10 mg PO initial |
 | metoprolol | oral | 23.53 | pad | 50 | label_start | 2.125 | [PASS] | [PASS] | FDA Lopressor label, 50 mg PO BID initial |
 | acetaminophen | oral | 412.7 | pad | 500 | label_start | 1.211 | [PASS] | [PASS] | FDA OTC Monograph 21 CFR 343, 325-650 mg q4-6h |
-| lisinopril | oral | 2.424 | pad | 10 | label_start | 4.126 | [FAIL] | [PASS] | FDA Prinivil label, 5-10 mg PO OD initial |
+| lisinopril | oral | 3.241 | pad | 10 | label_start | 3.085 | [FAIL] | [PASS] | FDA Prinivil label, 5-10 mg PO OD initial |
 | atorvastatin | oral | 16.98 | pad | 10 | label_start | 1.698 | [PASS] | [PASS] | FDA Lipitor label, 10 mg PO OD initial |
 
 ## Sanity floor (Tier B) — MRSD <= approved starting dose
@@ -86,3 +86,21 @@ Sprint 14 (diazepam audit) ticket characterized propranolol's residual as *"ACAT
 - F_oral ≈ 0.882 (vs literature 0.26) — overprediction by ~3.4x
 
 The gap is therefore the **same Sprint 12/13 multiplier-template pattern** (HLM CLint underprediction for IVIVE-known substrate classes), **not an ACAT architectural issue**. Sprint 14's claim was a hypothesis based on a quick mental model and is corrected here per CLAUDE.md §6.5 honesty.
+
+## Sprint 17 Branch B — lisinopril Peff back-calibration (2026-04-27)
+
+Audit-first sprint surfaced that Charon **over-predicts F_oral for lisinopril** (0.33 pred vs 0.25 obs, Beermann 1988). Sprint 16 closure had misframed this as "renal CL refinement"; Sprint 17 audit refuted that — CL_renal=5.0 is direct experimental input.
+
+Root cause: `peff_cm_s: 0.3e-4` in YAML, which the file's existing comment self-flagged as "NO primary Peff measurement located". Lisinopril is BCS III + PEPT1 substrate (Knutter 2008); ACAT does not model PEPT1.
+
+Correction: `peff_cm_s = 2.10e-5` (back-calibrated to Beermann 1988 F_obs=0.25 typical adult). lisinopril row update:
+- Sprint 16: MRSD 2.424 mg, fold 4.126x
+- Sprint 17: MRSD 3.241 mg, fold 3.085x (Branch B close-but-not-quite)
+
+§8 status: 8/12 = 66.7% unchanged (per CLAUDE.md §6.5, Peff cannot honestly go below Beermann 1988 lower-bound). PEPT1 transporter modeling deferred as architectural sprint candidate.
+
+Updated residual classifications:
+- propranolol 4.82x — Sprint 15 Branch B (CYP2D6)
+- diazepam 4.91x — Sprint 14 honest null (low fu_p)
+- lisinopril 3.085x — Sprint 17 Branch B (Peff calibration; PEPT1 not modeled) ← updated from 4.13x
+- diclofenac 3.10x — Sprint 13 Branch B (UGT/CYP2C9)

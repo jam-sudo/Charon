@@ -1,6 +1,6 @@
 # Charon Sprint 10 — Tier A IVIVE Fold-Error Decomposition
 
-**Generated:** 2026-04-25T04:08:57.581591+00:00
+**Generated:** 2026-04-27T17:52:27.410419+00:00
 **Panel:** charon_sprint7_fih
 
 ## Summary
@@ -8,9 +8,9 @@
 | key | value |
 | --- | --- |
 | n_compounds | 12 |
-| aggregate_pct_liver_model | 7.714 |
+| aggregate_pct_liver_model | 7.972 |
 | aggregate_pct_route_bias | 0.000 |
-| aggregate_pct_residual | 92.29 |
+| aggregate_pct_residual | 92.03 |
 
 ## Results
 
@@ -21,8 +21,8 @@
 | compound | mrsd_ws_mg | mrsd_pt_mg | mrsd_disp_mg | clh_ws_L_h | clh_pt_L_h | clh_disp_L_h | cl_renal_L_h | reference_fih_mg | fih_reference_route | simulation_route | reference_route | f_lit | fold_observed_signed | fold_liver_model_signed | fold_route_bias | fold_residual_signed | fold_observed | fold_liver_model | fold_residual | best_alt_model | flags | f_source | notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | diazepam | 0.4074 | 0.4074 | 0.4074 | 0.04454 | 0.04455 | 0.04455 | 0.000 | 2 | oral | oral | oral | 0.93 | 0.2037 | 0.9998 | 1 | 0.2037 | 4.91 | 1 | 4.909 | parallel_tube | - | Greenblatt 1980 | F 0.90-1.00 oral vs IV cross-over |
-| lisinopril | 2.424 | 2.424 | 2.424 | 0.3166 | 0.3171 | 0.317 | 5 | 10 | oral | oral | oral | 0.25 | 0.2424 | 0.9999 | 1 | 0.2424 | 4.126 | 1 | 4.126 | parallel_tube | - | Beermann 1988 | Low GI absorption; F 0.25-0.29 reported range |
 | propranolol | 2.075 | 2.449 | 2.329 | 33.15 | 39.13 | 37.22 | 0.1 | 10 | oral | oral | oral | 0.26 | 0.2075 | 0.8476 | 1 | 0.2449 | 4.819 | 1.18 | 4.084 | parallel_tube | - | Wood 1978 | Extensive first-pass; F 15-40% range; 0.26 = median |
+| lisinopril | 3.241 | 3.242 | 3.242 | 0.3166 | 0.3171 | 0.317 | 5 | 10 | oral | oral | oral | 0.25 | 0.3241 | 0.9999 | 1 | 0.3242 | 3.085 | 1 | 3.085 | parallel_tube | - | Beermann 1988 | Low GI absorption; F 0.25-0.29 reported range |
 | diclofenac | 16.15 | 16.72 | 16.55 | 6.898 | 7.142 | 7.071 | 0.1 | 50 | oral | oral | oral | 0.54 | 0.323 | 0.9662 | 1 | 0.3343 | 3.096 | 1.035 | 2.991 | parallel_tube | - | Willis 1979 | F 0.54 after oral tablet; subject to enterohepatic recirculation |
 | verapamil | 16.05 | 20.05 | 18.73 | 46.3 | 57.83 | 54.03 | 0.000 | 40 | oral | oral | oral | 0.22 | 0.4013 | 0.8006 | 1 | 0.5012 | 2.492 | 1.249 | 1.995 | parallel_tube | - | Eichelbaum 1981 | High first-pass; F 10-35% range; 0.22 = median single-dose |
 | metoprolol | 23.53 | 28.55 | 26.92 | 39.92 | 48.59 | 45.77 | 0.7 | 50 | oral | oral | oral | 0.5 | 0.4706 | 0.8241 | 1 | 0.571 | 2.125 | 1.213 | 1.751 | parallel_tube | - | Regardh 1980 | F 0.40-0.60 range; 0.50 = midpoint of extensive metabolizers |
@@ -127,3 +127,59 @@ Remaining largest residuals after Sprint 15:
 - diazepam 4.91x — very low fu_p well-stirred sensitivity (Sprint 14 honest null; framework-limited)
 - lisinopril 4.13x — non-hepatic elimination + low Peff (renal CL, multiplier inappropriate)
 - diclofenac 3.10x — Sprint 13 close-but-not-quite (literature midpoint multiplier 3.5)
+
+## §12. Sprint 17 audit — lisinopril (Peff back-calibration, Branch B close-but-not-quite, 2026-04-27)
+
+Lisinopril 4.13x close-but-not-quite was flagged in Sprint 16 closure as a Sprint 17 candidate. Sprint 17 audit (`scripts/sprint17_audit.py`) refuted the original "renal CL refinement" framing — `clrenal_L_h: 5.0` is direct experimental input (Beermann 1988), not an IVIVE prediction.
+
+Audit Section 1 surfaced the actual gap: **Charon over-predicts `Fa = 0.3346` and `F_oral = 0.3342`**, both outside Beermann 1988 literature range (0.25-0.29). Investigation traced this to the YAML's `peff_cm_s: 0.3e-4` value, which the file's existing comment explicitly flagged "NO primary Peff measurement located".
+
+### Audit Section 1 — F-decomposition (pre-correction)
+
+| Component | Value | Literature | Verdict |
+|---|---:|---:|:---:|
+| Fa | 0.3346 | ~0.24-0.30 | **NO** |
+| Fg | 1.0020 | ~1.00 | OK |
+| Fh | 0.9968 | ~1.00 | OK |
+| F_oral | 0.3342 | ~0.25 (Beermann 1988) | **NO** |
+| CL_renal_L_h | 5.000 | 5.0 (Beermann 1988) | OK |
+| CL_total_L_h | 4.895 | ~5.1 (Beermann 1988) | OK |
+| MRSD_PAD | 2.424 mg | 2.424 (Sprint 16) | matches |
+| fold | 4.126 | 4.126 (Sprint 16) | matches |
+
+### Audit Section 3c — Peff sensitivity sweep
+
+Lowering Peff brings F into literature range. All honest F-anchors (Beermann 1988 0.25-0.29) give fold > 3x, however:
+
+| Peff (cm/s) | F_oral | MRSD (mg) | fold | F-anchor |
+|---:|---:|---:|---:|---|
+| 2.10e-5 | 0.2498 | 3.241 | 3.085 | Beermann 1988 typical (lower-bound) |
+| 2.30e-5 | 0.2696 | 3.004 | 3.329 | midpoint |
+| 2.50e-5 | 0.2888 | 2.805 | 3.566 | upper-bound |
+
+### Branch B decision (close-but-not-quite)
+
+Per CLAUDE.md §6.5, no Peff value within Beermann 1988 range closes within 3x. Selected **Peff = 2.10e-5 cm/s** (anchor: Beermann 1988 lower-bound F_obs=0.25, the commonly-cited typical adult value matching `panel.yaml` `f_lit=0.25`). Result: fold 4.126x → 3.085x. §8 unchanged at 8/12 = 66.7%.
+
+Honest framing of the correction:
+- The previous `peff_cm_s: 0.3e-4` had no primary citation (file comment self-flagged).
+- Lisinopril is a PEPT1 substrate (Knutter 2008); ACAT does not model PEPT1.
+- The "effective Peff" therefore lumps passive + PEPT1 contributions and is empirically tuned to reproduce observed F.
+- Branch A (within-3x) is unattainable via Peff calibration alone — passive-Peff lumping is insufficient at the precision required.
+
+### §8 status
+
+Layer 3 Tier A within-3x: 8/12 = 66.7% (unchanged since Sprint 12). lisinopril fold improves 4.13x → 3.085x but remains close-but-not-quite. Full closure requires PEPT1 transporter modeling (deferred as future architectural sprint candidate, noted in spec §3 non-goals).
+
+### Updated residual classifications
+
+- propranolol 4.82x — Sprint 15 Branch B (CYP2D6 IVIVE multiplier)
+- diazepam 4.91x — Sprint 14 honest null (framework-low-fu_p)
+- lisinopril 3.085x — Sprint 17 Branch B (Peff back-calibration; needs PEPT1 architectural lift) ← updated from 4.13x
+- diclofenac 3.10x — Sprint 13 Branch B (UGT/CYP2C9 multiplier)
+
+### Pattern lessons established
+
+- "Audit FIRST" precedent (Sprint 14) extended to PK over-prediction case.
+- Honest-anchor pattern: when literature reports a range, calibration to the lower-bound (typical adult value) is more defensible than midpoint when the range represents inter-subject variability and a primary single-value citation exists.
+- Sprint 16 marker preservation infrastructure exercised for first time in benchmark regen + narrative append (§9-§11 + §12 stable across regen — verified by `grep` counts pre/post regen).
